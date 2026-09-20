@@ -1,0 +1,18 @@
+# Local files and editor history
+.DS_Store
+.history/
+.vscode/
+.idea/
+
+# Dependencies and local configuration
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Temporary files and backups
+*.log
+*.tmp
+*.bak
+*.zip
+*.orig

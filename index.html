@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>TeldHub · 充电运营超级助手</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/teldhub-mark.svg?v=20260920-ico">
+  <link rel="stylesheet" href="./style.css?v=20260920-account-inset8">
+  <script src="./app.js?v=20260920-standalone-icons" defer></script>
+</head>
+<body>
+  <div class="workspace" id="workspace">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-lockup"><img class="brand-logo" src="./assets/AIHubLOGO.svg?v=d2bbd680c4" width="600" height="180" alt="AI Hub"></div>
+      </div>
+      <div class="topbar-left">
+        <div class="region-selector" id="regionSelector">
+          <button class="region-control" id="regionButton" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="regionPopover" aria-label="区域选择，当前：济南特来电新能源有限公司" title="济南特来电新能源有限公司" data-area-type="company" data-area-code="C3701">
+            <span class="region-label" id="regionLabel">济南特来电新能源有限公司</span>
+            <svg class="icon chevron" aria-hidden="true"><use href="./assets/icons/chevron-down.svg#chevron-down"></use></svg>
+          </button>
+          <div class="region-popover" id="regionPopover" role="dialog" aria-label="选择区域" hidden>
+            <div class="region-search">
+              <svg class="icon" aria-hidden="true"><use href="./assets/icons/search.svg#search"></use></svg>
+              <input id="regionSearch" type="text" placeholder="输入编号或名称搜索" aria-label="输入编号或名称搜索" autocomplete="off" spellcheck="false">
+              <button class="region-clear" id="regionClear" type="button" aria-label="清空搜索" title="清空搜索" hidden><svg class="icon" aria-hidden="true"><use href="./assets/icons/clear.svg#clear"></use></svg></button>
+            </div>
+            <div class="region-tabs" role="tablist" aria-label="区域类型">
+              <button class="region-tab" id="areaRegionTab" type="button" role="tab" aria-selected="false" aria-controls="regionPanel" data-area-tab="region" tabindex="-1">大区列表</button>
+              <button class="region-tab is-active" id="areaCompanyTab" type="button" role="tab" aria-selected="true" aria-controls="regionPanel" data-area-tab="company">公司列表</button>
+            </div>
+            <div class="region-panel" id="regionPanel" role="tabpanel" aria-labelledby="areaCompanyTab">
+              <div class="region-table-head" aria-hidden="true"><span>编号</span><span>名称</span><span></span></div>
+              <div class="region-results" id="regionResults"></div>
+            </div>
+            <span class="visually-hidden" id="regionResultStatus" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+      <div class="topbar-right" aria-label="顶部工具入口">
+        <span class="toolbar-item" aria-label="最近任务"><svg class="icon" aria-hidden="true"><use href="./assets/icons/history.svg#history"></use></svg><span>最近任务</span></span>
+        <span class="toolbar-item" aria-label="通知"><span class="notification-icon"><svg class="icon" aria-hidden="true"><use href="./assets/icons/bell.svg#bell"></use></svg><i aria-hidden="true"></i></span><span>通知</span></span>
+        <span class="toolbar-item" aria-label="反馈"><svg class="icon" aria-hidden="true"><use href="./assets/icons/message.svg#message"></use></svg><span>反馈</span></span>
+      </div>
+    </header>
+    <aside class="sidebar" aria-label="工作台侧栏">
+      <button class="collapse-button" id="collapseButton" type="button" aria-label="收起侧栏" aria-expanded="true" aria-controls="sidebarContent" title="收起侧栏">
+        <svg class="icon" aria-hidden="true"><use href="./assets/icons/chevron-left.svg#chevron-left"></use></svg>
+      </button>
+      <div class="sidebar-content" id="sidebarContent">
+        <nav class="primary-nav" aria-label="主导航">
+          <button type="button" class="nav-item" id="todosNav" title="我的待办" aria-label="我的待办，3 项" aria-controls="todosView">
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons/todo.svg#todo"></use></svg><span class="nav-label">我的待办</span><span class="nav-badge" id="todoNavCount">3</span>
+          </button>
+          <button type="button" class="nav-item" id="capabilitiesNav" title="专家·技能" aria-label="专家·技能" aria-controls="capabilitiesView">
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons/capabilities.svg#capabilities"></use></svg><span class="nav-label">专家·技能</span>
+          </button>
+        </nav>
+
+        <section class="people-section" aria-label="专家与员工">
+          <div class="people-tabs" role="tablist" aria-label="切换专家或员工">
+            <button class="people-tab is-active" id="expertTab" type="button" role="tab" aria-label="专属专家" aria-selected="true" aria-controls="peopleList" data-tab="expert" title="专属专家"><svg class="icon" aria-hidden="true"><use href="./assets/icons/expert.svg#expert"></use></svg><span>专属专家</span></button>
+            <button class="people-tab" id="employeeTab" type="button" role="tab" aria-label="我的员工" aria-selected="false" aria-controls="peopleList" data-tab="employee" tabindex="-1" title="我的员工"><svg class="icon" aria-hidden="true"><use href="./assets/icons/employee.svg#employee"></use></svg><span>我的员工</span></button>
+          </div>
+          <div class="people-list" id="peopleList" role="tabpanel" aria-labelledby="expertTab"></div>
+        </section>
+
+        <button class="account-area" id="accountArea" type="button" aria-label="打开账户菜单，技术研究院，张灿" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu" title="账户菜单">
+          <span class="account-avatar" id="accountAvatar" aria-hidden="true">张</span>
+          <span class="account-copy"><b id="accountDepartment">技术研究院</b><span id="accountName">张灿</span></span>
+          <span class="account-more" aria-hidden="true"><svg class="icon"><use href="./assets/icons/more.svg#more"></use></svg></span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="content-area" id="mainContent" aria-label="经营分析专家内容区" tabindex="-1">
+      <header class="task-detail-header" id="taskDetailHeader" hidden>
+        <button type="button" class="task-back-button" id="taskBack" aria-label="返回专家首页"><svg class="icon" aria-hidden="true"><use href="./assets/icons/task-back.svg#task-back"></use></svg><span>返回</span></button>
+        <h1 id="taskDetailTitle">任务详情</h1>
+        <button type="button" class="task-new-button" id="taskNew"><svg class="icon" aria-hidden="true"><use href="./assets/icons/composer-add.svg#composer-add"></use></svg><span>新建任务</span></button>
+      </header>
+      <div class="content-scroll" id="contentScroll">
+        <section class="capabilities-view" id="capabilitiesView" aria-labelledby="capabilitiesTitle" hidden>
+          <header class="capability-hero">
+            <div class="capability-hero-art" aria-hidden="true">
+              <div class="capability-orbit" id="capabilityOrbit"></div>
+            </div>
+            <div class="capability-hero-copy">
+              <h1 id="capabilitiesTitle">专家 <span class="capability-title-dot">·</span> <span class="capability-title-accent">技能</span></h1>
+              <p><span>专家承载专业经验与判断方法</span><span>技能承载可复用、可直接调用的业务能力</span></p>
+            </div>
+          </header>
+          <div class="capabilities-controls">
+            <div class="capabilities-toolbar">
+              <div class="capabilities-tabs" role="tablist" aria-label="能力类型">
+                <button type="button" role="tab" id="capExpertTab" data-cap-tab="expert" aria-selected="true" aria-controls="capabilityResults">专家</button>
+                <button type="button" role="tab" id="capTeamTab" data-cap-tab="team" aria-selected="false" aria-controls="capabilityResults" tabindex="-1">专家团</button>
+                <button type="button" role="tab" id="capSkillTab" data-cap-tab="skill" aria-selected="false" aria-controls="capabilityResults" tabindex="-1">技能</button>
+              </div>
+              <div class="capability-search">
+                <svg class="icon" aria-hidden="true"><use href="./assets/icons/search.svg#search"></use></svg>
+                <input type="search" id="capabilitySearch" aria-label="搜索专家" placeholder="搜索专家、标签或场景" autocomplete="off">
+                <button type="button" id="capabilitySearchClear" aria-label="清空能力搜索" hidden><svg class="icon" aria-hidden="true"><use href="./assets/icons/composer-remove.svg#composer-remove"></use></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="capability-browser">
+            <div class="capability-scenes" role="group" aria-label="适用场景">
+              <h2 class="capability-filter-label">适用场景</h2>
+              <div class="capability-scene-options">
+                <button type="button" data-cap-scene="all" aria-label="全部" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="./assets/icons/capabilities-filled.svg#capabilities-filled"></use></svg><span class="capability-scene-label">全部</span><span class="capability-scene-count" aria-hidden="true">4</span></button>
+                <button type="button" data-cap-scene="经营分析" aria-label="经营分析" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="./assets/icons/analysis-filled.svg#analysis-filled"></use></svg><span class="capability-scene-label">经营分析</span><span class="capability-scene-count" aria-hidden="true">1</span></button>
+                <button type="button" data-cap-scene="智慧价格" aria-label="智慧价格" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="./assets/icons/price-filled.svg#price-filled"></use></svg><span class="capability-scene-label">智慧价格</span><span class="capability-scene-count" aria-hidden="true">1</span></button>
+                <button type="button" data-cap-scene="用户运营" aria-label="用户运营" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="./assets/icons/users-filled.svg#users-filled"></use></svg><span class="capability-scene-label">用户运营</span><span class="capability-scene-count" aria-hidden="true">1</span></button>
+                <button type="button" data-cap-scene="设备运维" aria-label="设备运维" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="./assets/icons/device-filled.svg#device-filled"></use></svg><span class="capability-scene-label">设备运维</span><span class="capability-scene-count" aria-hidden="true">1</span></button>
+              </div>
+            </div>
+            <section class="capability-results" id="capabilityResults" role="tabpanel" aria-labelledby="capExpertTab">
+              <div class="capability-results-heading"><h2 id="capabilityResultsTitle">全部专家</h2><span id="capabilityResultCount" role="status"></span></div>
+              <div class="capability-grid" id="capabilityGrid"></div>
+              <div class="capability-empty" id="capabilityEmpty" hidden>
+                <span class="capability-empty-icon"><svg class="icon" aria-hidden="true"><use href="./assets/icons/search.svg#search"></use></svg></span>
+                <h3>未找到匹配内容</h3><p>试试其他关键词，或调整适用场景。</p>
+                <button type="button" id="capabilityReset">重置筛选</button>
+              </div>
+            </section>
+          </div>
+        </section>
+        <button type="button" class="capability-back" id="capabilityBack" hidden><svg class="icon" aria-hidden="true"><use href="./assets/icons/chevron-left.svg#chevron-left"></use></svg>返回专家·技能</button>
+        <section class="welcome-hero" aria-labelledby="welcomeTitle">
+          <div class="welcome-copy">
+            <p class="welcome-eyebrow"><span class="welcome-eyebrow-mark" aria-hidden="true"><svg class="icon"><use href="./assets/icons/welcome-stars-filled.svg#welcome-stars-filled"></use></svg></span><span>AI 驱动 · 专家随行 · 让充电运营更简单</span></p>
+            <h1 id="welcomeTitle"><span class="welcome-brand-group"><span class="welcome-brand">TeldHub</span>, </span><span id="welcomeAssistant">你的经营分析超级助手</span></h1>
+            <p class="welcome-description">连接数据<span aria-hidden="true">·</span>洞察业务<span aria-hidden="true">·</span>释放增长潜力</p>
+          </div>
+          <div class="welcome-visual">
+            <button type="button" class="welcome-question" id="welcomeQuestion">
+              <span class="welcome-question-heading"><svg class="icon" aria-hidden="true"><use href="./assets/icons/welcome-stars-filled.svg#welcome-stars-filled"></use></svg><span>试试问我</span><svg class="icon welcome-question-arrow" aria-hidden="true"><use href="./assets/icons/task-arrow.svg#task-arrow"></use></svg></span>
+              <span class="welcome-question-text" id="welcomeQuestionText"></span>
+            </button>
+            <img class="welcome-robot" src="./assets/welcome-robot.png" width="1254" height="1254" alt="" aria-hidden="true" decoding="async" fetchpriority="high">
+          </div>
+        </section>
+        <section class="content-surface expert-overview" id="businessContent" aria-labelledby="profileName">
+          <div class="expert-details">
+            <header class="expert-identity">
+              <span class="person-avatar expert-avatar" id="profileAvatar" aria-hidden="true"></span>
+              <h2 id="profileName">经营分析专家</h2>
+            </header>
+            <p class="expert-description" id="profileDescription"></p>
+            <ul class="expert-benefits" id="profileBenefits" aria-label="能力与利益点"></ul>
+            <section class="expert-suggestions" aria-labelledby="suggestionsTitle">
+              <h3 id="suggestionsTitle">专家能帮你做什么</h3>
+              <div class="expert-task-list" id="profileTasks"></div>
+            </section>
+          </div>
+          <figure class="expert-video" id="profileVideo" aria-label="经营分析专家使用介绍视频封面，视频即将上线">
+            <div class="video-cover" aria-hidden="true">
+              <span class="video-series">TeldHub<span>使用视频</span></span>
+              <div class="video-cover-title"><strong id="videoProfileName">经营分析专家</strong><span>能力与使用方式</span></div>
+              <div class="video-emblem" id="videoEmblem"></div>
+              <span class="video-overlay"></span>
+              <span class="video-play-mark"><svg class="icon"><use href="./assets/icons/video-play.svg#video-play"></use></svg></span>
+              <div class="video-cover-footer"><span class="video-coming">视频即将上线</span></div>
+            </div>
+          </figure>
+        </section>
+        <section class="todos-view" id="todosView" aria-label="我的待办与定时任务" hidden>
+          <header class="work-header">
+            <div class="work-primary-tabs" role="tablist" aria-label="待办与定时任务">
+              <button type="button" id="workTodoTab" role="tab" aria-selected="true" aria-controls="todoWorkPanel" data-work-tab="todo">我的待办</button>
+              <button type="button" id="workScheduleTab" role="tab" aria-selected="false" aria-controls="scheduleWorkPanel" data-work-tab="schedule" tabindex="-1">定时任务</button>
+            </div>
+          </header>
+          <p class="work-intro" id="workIntro">集中查看、处理运营工作流中的审批与确认事项。</p>
+          <section id="todoWorkPanel" role="tabpanel" aria-labelledby="workTodoTab">
+            <div class="work-filterbar">
+              <div class="work-subtabs" role="tablist" aria-label="待办分类">
+                <button type="button" id="todoPendingTab" role="tab" aria-selected="true" aria-controls="todoListPanel" data-todo-tab="pending">待处理<span id="todoPendingCount">3</span></button>
+                <button type="button" id="todoProcessedTab" role="tab" aria-selected="false" aria-controls="todoListPanel" data-todo-tab="processed" tabindex="-1">已处理</button>
+                <button type="button" id="todoInitiatedTab" role="tab" aria-selected="false" aria-controls="todoListPanel" data-todo-tab="initiated" tabindex="-1">我发起的</button>
+                <button type="button" id="todoReceivedTab" role="tab" aria-selected="false" aria-controls="todoListPanel" data-todo-tab="received" tabindex="-1">我收到的</button>
+              </div>
+              <div class="work-filters">
+                <div class="work-search"><svg class="icon" aria-hidden="true"><use href="./assets/icons/search.svg#search"></use></svg><input type="search" id="todoSearch" aria-label="搜索待办" placeholder="搜索标题、单号或发起人" autocomplete="off"><button type="button" id="todoSearchClear" aria-label="清空待办搜索" hidden><svg class="icon" aria-hidden="true"><use href="./assets/icons/composer-remove.svg#composer-remove"></use></svg></button></div>
+                <select class="work-select" id="todoTypeFilter" aria-label="业务类型"><option value="all">全部业务类型</option><option>调价审批</option><option>营销审批</option><option>工单审批</option><option>经营审批</option><option>报告确认</option></select>
+                <select class="work-select" id="todoSort" aria-label="待办排序"><option value="newest">最近更新</option><option value="oldest">最早更新</option></select>
+              </div>
+            </div>
+            <div id="todoListPanel" role="tabpanel" aria-labelledby="todoPendingTab"><div class="todo-list" id="todoList"></div><p class="work-list-summary" id="todoListSummary" role="status"></p></div>
+          </section>
+          <section id="scheduleWorkPanel" role="tabpanel" aria-labelledby="workScheduleTab" hidden>
+            <div class="work-filterbar">
+              <div class="work-subtabs" role="tablist" aria-label="定时任务分类"><button type="button" id="scheduleListTab" role="tab" aria-selected="true" aria-controls="schedulePanel" data-schedule-tab="list">任务列表</button><button type="button" id="scheduleRunsTab" role="tab" aria-selected="false" aria-controls="runsPanel" data-schedule-tab="runs" tabindex="-1">运行记录</button></div>
+              <button type="button" class="work-button primary" id="newScheduleButton"><svg class="icon" aria-hidden="true"><use href="./assets/icons/composer-add.svg#composer-add"></use></svg>添加定时任务</button>
+            </div>
+            <section id="schedulePanel" role="tabpanel" aria-labelledby="scheduleListTab">
+              <div class="work-table-toolbar"><div class="work-filters">
+                <div class="work-search"><svg class="icon" aria-hidden="true"><use href="./assets/icons/search.svg#search"></use></svg><input type="search" id="scheduleSearch" aria-label="搜索定时任务" placeholder="搜索定时任务" autocomplete="off"></div>
+                <select class="work-select" id="scheduleStatusFilter" aria-label="定时任务状态"><option value="all">全部状态</option><option value="on">已启用</option><option value="pause">已暂停</option></select>
+                <select class="work-select" id="scheduleProjectFilter" aria-label="所属项目"><option value="all">全部项目</option><option value="">无</option><option>济南公司智慧运营</option><option>设备健康专项</option></select>
+              </div><span class="work-table-count" id="scheduleCount" role="status"></span></div>
+              <div class="work-table-scroll" tabindex="0" role="region" aria-label="定时任务列表"><table class="work-table schedule-table"><thead><tr><th scope="col">任务</th><th scope="col">执行周期</th><th scope="col">下次执行</th><th scope="col">状态</th><th scope="col">最近执行</th><th scope="col">操作</th></tr></thead><tbody id="scheduleRows"></tbody></table></div>
+            </section>
+            <section id="runsPanel" role="tabpanel" aria-labelledby="scheduleRunsTab" hidden>
+              <div class="work-table-toolbar"><div class="work-filters">
+                <div class="work-search"><svg class="icon" aria-hidden="true"><use href="./assets/icons/search.svg#search"></use></svg><input type="search" id="runSearch" aria-label="搜索运行记录" placeholder="搜索运行记录" autocomplete="off"></div>
+                <select class="work-select" id="runStatusFilter" aria-label="执行状态"><option value="all">全部执行状态</option><option value="done">成功</option><option value="fail">失败</option><option value="running">运行中</option></select>
+                <select class="work-select" id="runTimeFilter" aria-label="执行时间"><option value="all">全部时间</option><option value="today">今天</option><option value="7">最近7天</option><option value="30">最近30天</option></select>
+              </div><span class="work-table-count" id="runCount" role="status"></span></div>
+              <div class="work-table-scroll" tabindex="0" role="region" aria-label="定时任务运行记录"><table class="work-table run-table"><thead><tr><th scope="col">运行记录</th><th scope="col">状态</th><th scope="col">触发方式</th><th scope="col">执行时间</th><th scope="col">操作</th></tr></thead><tbody id="runRows"></tbody></table></div>
+            </section>
+          </section>
+        </section>
+        <section class="task-detail-view" id="taskDetailView" aria-label="任务对话" hidden>
+          <div class="task-conversation" id="taskConversation"></div>
+        </section>
+      </div>
+      <section class="task-composer" id="taskComposer" aria-labelledby="taskComposerTitle">
+        <h2 class="task-composer-title" id="taskComposerTitle"><svg class="icon" aria-hidden="true"><use href="./assets/icons/welcome-stars-filled.svg#welcome-stars-filled"></use></svg>描述你的任务需求</h2>
+        <textarea id="taskPrompt" aria-label="任务内容" rows="3" placeholder="例如：分析最近7天充电量的变化趋势，并说明是否存在异常？"></textarea>
+        <div class="composer-references" id="composerReferences" aria-label="已添加的文件与引用" hidden></div>
+        <div class="composer-toolbar">
+          <div class="composer-tools-left">
+            <button type="button" class="composer-icon-button composer-add" id="composerAdd" title="添加文件与引用" aria-label="添加文件与引用" aria-haspopup="dialog" aria-expanded="false" aria-controls="composerPopover"><svg class="icon" aria-hidden="true"><use href="./assets/icons/composer-add.svg#composer-add"></use></svg></button>
+            <div class="composer-voice-anchor">
+              <button type="button" class="composer-icon-button composer-microphone" id="composerMicrophone" aria-label="语音输入" aria-pressed="false" aria-expanded="false" aria-controls="composerVoice" title="语音输入"><svg class="icon" aria-hidden="true"><use href="./assets/icons/composer-mic.svg#composer-mic"></use></svg></button>
+              <div class="composer-voice" id="composerVoice" role="group" aria-label="语音录入操作" hidden>
+                <div class="voice-state">
+                  <span class="voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+                  <span><strong>语音输入</strong><small>完成后填入文本</small></span>
+                </div>
+                <div class="voice-actions">
+                  <button type="button" class="voice-finish" id="finishVoice">完成录入</button>
+                  <button type="button" id="cancelVoice">取消</button>
+                </div>
+              </div>
+            </div>
+            <span class="composer-context composer-executor"><svg class="icon" id="composerExpertIcon" aria-hidden="true"><use href="./assets/icons/analysis-filled.svg#analysis-filled"></use></svg><span id="composerExpertName">经营分析专家</span></span>
+            <span class="composer-context" id="composerRegion" title="济南特来电新能源有限公司">济南特来电新能源有限公司</span>
+          </div>
+          <div class="composer-tools-right">
+            <button type="button" class="composer-model-button" id="composerModel" aria-label="选择模型，当前 Auto" aria-haspopup="dialog" aria-expanded="false" aria-controls="composerPopover"><svg class="icon" id="composerModelIcon" aria-hidden="true"><use href="./assets/icons/composer-model.svg#composer-model"></use></svg><span id="composerModelName">Auto</span><svg class="icon model-chevron" aria-hidden="true"><use href="./assets/icons/chevron-down.svg#chevron-down"></use></svg></button>
+            <button type="button" class="composer-send" id="composerSend" aria-label="开始任务" title="开始任务" disabled><svg class="icon" aria-hidden="true"><use href="./assets/icons/composer-send.svg#composer-send"></use></svg><span>开始任务</span></button>
+          </div>
+        </div>
+        <input id="composerFileInput" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv,.pdf,.md,.txt,.doc,.docx,.ppt,.pptx" hidden>
+      </section>
+      <span class="visually-hidden" id="taskDraftStatus" role="status"></span>
+    </main>
+  </div>
+  <div class="composer-popover" id="composerPopover" role="dialog" aria-label="添加内容" hidden></div>
+  <div class="account-menu" id="accountMenu" role="menu" aria-label="账户菜单" hidden>
+    <button type="button" role="menuitem" tabindex="-1" data-account-action="profile"><svg class="icon" aria-hidden="true"><use href="./assets/icons/account-profile.svg#account-profile"></use></svg>个人信息</button>
+    <button type="button" role="menuitem" tabindex="-1" data-account-action="account"><svg class="icon" aria-hidden="true"><use href="./assets/icons/account-wallet.svg#account-wallet"></use></svg>账户管理</button>
+    <button type="button" role="menuitem" tabindex="-1" data-account-action="models"><svg class="icon" aria-hidden="true"><use href="./assets/icons/account-models.svg#account-models"></use></svg>模型管理</button>
+  </div>
+  <dialog class="composer-dialog" id="composerDialog" aria-labelledby="composerDialogTitle">
+    <header class="composer-dialog-header"><h2 id="composerDialogTitle"></h2><button type="button" class="task-dismiss panel-close" id="closeComposerDialog" aria-label="关闭弹窗"><svg class="icon" aria-hidden="true"><use href="./assets/icons/panel-close.svg#panel-close"></use></svg></button></header>
+    <div class="composer-dialog-body" id="composerDialogBody"></div>
+    <footer class="composer-dialog-footer" id="composerDialogFooter"></footer>
+  </dialog>
+  <dialog class="task-drawer" id="taskDrawer" aria-labelledby="taskDrawerTitle">
+    <header class="task-drawer-header"><button type="button" class="task-dismiss" id="taskDrawerBack" aria-label="返回产物列表" hidden><svg class="icon" aria-hidden="true"><use href="./assets/icons/task-back.svg#task-back"></use></svg></button><h2 id="taskDrawerTitle">任务产物</h2><button type="button" class="task-dismiss panel-close" id="taskDrawerClose" aria-label="关闭任务侧栏"><svg class="icon" aria-hidden="true"><use href="./assets/icons/panel-close.svg#panel-close"></use></svg></button></header>
+    <div class="task-drawer-body" id="taskDrawerBody"></div>
+  </dialog>
+  <div class="selection-toast" id="selectionToast" role="status" hidden></div>
+</body>
+</html>
