@@ -139,20 +139,25 @@
             <ul class="expert-benefits" id="profileBenefits" aria-label="能力与利益点"></ul>
           </div>
           <div class="welcome-visual">
-            <button type="button" class="welcome-question" id="welcomeQuestion">
-              <span class="welcome-question-heading"><svg class="icon" aria-hidden="true"><use href="./assets/icons/welcome-stars-filled.svg#welcome-stars-filled"></use></svg><span>试试问我</span><svg class="icon welcome-question-arrow" aria-hidden="true"><use href="./assets/icons/task-arrow.svg#task-arrow"></use></svg></span>
-              <span class="welcome-question-text" id="welcomeQuestionText"></span>
-            </button>
+            <p class="welcome-question"><span class="welcome-question-heading">Hi! 👋</span><span class="welcome-question-text">有什么可以帮你的吗？</span></p>
             <img class="welcome-robot" src="./assets/welcome-robot.png" width="1254" height="1254" alt="" aria-hidden="true" decoding="async" fetchpriority="high">
           </div>
         </section>
-        <section class="content-surface expert-overview" id="businessContent" aria-labelledby="suggestionsTitle">
-          <div class="expert-overview-header">
-            <h2 id="suggestionsTitle"><svg class="icon" aria-hidden="true"><use href="./assets/icons/expert-ai-message.svg#expert-ai-message"></use></svg><span id="suggestionsTitleText">专家能帮你做点什么？</span></h2>
-            <button class="expert-refresh" id="refreshProfileTasks" type="button" aria-controls="profileTasks"><svg class="icon" aria-hidden="true"><use href="./assets/icons/task-regenerate.svg#task-regenerate"></use></svg>换一批</button>
-          </div>
-          <div class="expert-task-list" id="profileTasks"></div>
-        </section>
+        <div class="expert-resources" id="businessContent">
+          <section class="content-surface expert-overview" aria-labelledby="suggestionsTitle">
+            <div class="expert-overview-header">
+              <h2 id="suggestionsTitle"><svg class="icon" aria-hidden="true"><use href="./assets/icons/expert-ai-message.svg#expert-ai-message"></use></svg><span id="suggestionsTitleText">专家能帮你做点什么？</span></h2>
+              <button class="expert-refresh" id="refreshProfileTasks" type="button" aria-controls="profileTasks"><svg class="icon" aria-hidden="true"><use href="./assets/icons/task-regenerate.svg#task-regenerate"></use></svg>换一批</button>
+            </div>
+            <div class="expert-task-list" id="profileTasks"></div>
+          </section>
+          <button class="expert-video-card" id="profileVideo" type="button" aria-haspopup="dialog" aria-label="观看视频：经营分析专家的能力与使用方式">
+            <span class="video-cover-heading"><strong>TeldHub</strong><span>使用视频</span></span>
+            <span class="video-cover-art" aria-hidden="true"><svg class="icon"><use id="profileVideoIcon" href="./assets/icons/analysis-filled.svg#analysis-filled"></use></svg></span>
+            <span class="video-cover-play" aria-hidden="true"><svg class="icon"><use href="./assets/icons/video-play.svg#video-play"></use></svg></span>
+            <span class="video-cover-copy"><strong id="profileVideoTitle">经营分析专家</strong><span>快速了解专家能力与使用方式</span></span>
+          </button>
+        </div>
         <section class="todos-view" id="todosView" aria-label="我的待办与定时任务" hidden>
           <header class="work-header">
             <div class="work-primary-tabs" role="tablist" aria-label="待办与定时任务">

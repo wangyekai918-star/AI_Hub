@@ -275,32 +275,53 @@ const capabilityCatalog = [
   { id: 'device-diagnosis', type: 'skill', name: '设备故障诊断', scene: '设备运维', icon: 'fault-diagnosis-filled', color: 'teal', description: '根据设备状态、故障码和历史记录定位故障链路。', meta: '设备运维', authorized: true }
 ];
 
-/* 能力名称与 Solar 图标显式对应，不按卡片位置复用通用图标。 */
+/* 利益点统一使用本地 Solar Bold 面型图标，按能力名称显式对应。 */
 const benefitIcons = {
   "数据查询": "benefit-database",
   "经营分析": "benefit-chart",
   "趋势诊断": "benefit-trend",
-  "智慧定价": "price",
-  "竞品分析": "competition",
+  "智慧定价": "price-filled",
+  "竞品分析": "competition-filled",
   "收益测算": "benefit-calculator",
-  "用户运营": "users",
+  "用户运营": "users-filled",
   "新客转化": "benefit-conversion",
   "流失召回": "benefit-recall",
-  "故障诊断": "device",
+  "故障诊断": "benefit-diagnosis",
   "离线巡检": "benefit-offline",
   "工单建议": "benefit-workorder",
   "综合经营": "benefit-chart",
   "多专家协同": "team-filled",
   "经营提升": "benefit-trend",
-  "价格策略": "price",
+  "价格策略": "price-filled",
   "用户增长": "benefit-conversion",
-  "促销运营": "promotion",
-  "设备健康": "device",
+  "促销运营": "promotion-filled",
+  "设备健康": "device-filled",
   "协同处置": "team-filled",
   "工单闭环": "benefit-workorder",
   "查爱车信息": "benefit-vehicle",
   "看认证状态": "benefit-vehicle-auth",
   "申请改车型": "benefit-vehicle-correction"
+};
+// 利益点按图标语义固定配色，不套用角色底座或页面主题色。
+const benefitIconColors = {
+  'benefit-database': '#F39A38',
+  'benefit-chart': '#3F96EB',
+  'benefit-trend': '#20B295',
+  'price-filled': '#E9A13A',
+  'competition-filled': '#1AA9BA',
+  'benefit-calculator': '#20B295',
+  'users-filled': '#F07891',
+  'benefit-conversion': '#20B295',
+  'benefit-recall': '#3F96EB',
+  'device-filled': '#F39A38',
+  'benefit-diagnosis': '#F39A38',
+  'benefit-offline': '#3F96EB',
+  'benefit-workorder': '#20B295',
+  'team-filled': '#F39A38',
+  'promotion-filled': '#F07891',
+  'benefit-vehicle': '#3F96EB',
+  'benefit-vehicle-auth': '#20B295',
+  'benefit-vehicle-correction': '#F39A38'
 };
 const avatarColors = {
   blue: ['linear-gradient(145deg, #4c71f5 0%, #6aafff 100%)', '#ffffff'],
@@ -313,23 +334,18 @@ const peopleList = document.querySelector('#peopleList');
 const mainContent = document.querySelector('#mainContent');
 const contentScroll = document.querySelector('#contentScroll');
 const welcomeTitle = document.querySelector('#welcomeTitle');
-const welcomeQuestion = document.querySelector('#welcomeQuestion');
-const welcomeQuestionText = document.querySelector('#welcomeQuestionText');
 const welcomeVisual = document.querySelector('.welcome-visual');
-const welcomeMotionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-let welcomeQuestionTimer = null;
-let welcomeQuestionIndex = 0;
-let welcomeQuestionHovered = false;
-let welcomeQuestionFocused = false;
-let welcomeQuestionVisible = true;
 const businessContent = document.querySelector('#businessContent');
 const profileDescription = document.querySelector('#profileDescription');
 const profileBenefits = document.querySelector('#profileBenefits');
 const profileTasks = document.querySelector('#profileTasks');
+const profileVideo = document.querySelector('#profileVideo');
+const profileVideoTitle = document.querySelector('#profileVideoTitle');
+const profileVideoIcon = document.querySelector('#profileVideoIcon');
 const suggestionsTitleText = document.querySelector('#suggestionsTitleText');
 const refreshProfileTasks = document.querySelector('#refreshProfileTasks');
 const profileTaskOffsets = new Map();
-const profileTaskBatchSize = 3;
+const profileTaskBatchSize = 4;
 const taskComposer = document.querySelector('#taskComposer');
 // 同步悬浮输入框高度，确保最后一条正文能滚过遮罩，且输入框增高时仍可查看。
 const composerLayoutObserver = new ResizeObserver(() => {
@@ -414,7 +430,9 @@ function updateNav() {
 }
 
 function iconUrl(name) {
-  return `./assets/icons/${name}.svg#${name}`;
+  // 同名利益点资源由 Linear 换为 Bold，更新版本以刷新浏览器的外部 SVG 缓存。
+  const version = name.startsWith('benefit-') ? '?v=bold-2' : '';
+  return `./assets/icons/${name}.svg${version}#${name}`;
 }
 
 function iconMarkup(name) {
@@ -437,6 +455,7 @@ function renderProfile() {
     profileDescription.textContent = details.description;
     profileBenefits.replaceChildren(...details.benefits.map(benefit => {
       const item = document.createElement('li');
+      item.style.setProperty('--benefit-icon-color', benefitIconColors[benefitIcons[benefit]]);
       item.innerHTML = iconMarkup(benefitIcons[benefit]);
       const label = document.createElement('strong');
       label.textContent = benefit;
@@ -444,10 +463,12 @@ function renderProfile() {
       return item;
     }));
     suggestionsTitleText.textContent = person.id.endsWith('_team') ? '专家团能帮你做点什么？' : '专家能帮你做点什么？';
+    profileVideoTitle.textContent = person.name;
+    profileVideoIcon.setAttribute('href', iconUrl(`${person.icon}-filled`));
+    profileVideo.setAttribute('aria-label', `观看视频：${person.name}的能力与使用方式`);
     renderProfileTaskEntries(person);
     taskPrompt.placeholder = `例如：${details.tasks[0].prompt}`;
     renderedProfileId = person.id;
-    resetWelcomeQuestion();
   }
   syncTaskDraft(person.id);
 }
@@ -456,16 +477,6 @@ function renderProfile() {
 function renderProfileTaskEntries(person) {
   const tasks = profileDetails[person.id].tasks;
   const offset = profileTaskOffsets.get(person.id) || 0;
-  let videoEntry = profileTasks.querySelector('[data-profile-video]');
-  if (videoEntry?.dataset.profileVideo !== person.id) {
-    videoEntry = document.createElement('button');
-    videoEntry.type = 'button';
-    videoEntry.className = 'expert-task expert-video-entry';
-    videoEntry.dataset.profileVideo = person.id;
-    videoEntry.setAttribute('aria-haspopup', 'dialog');
-    videoEntry.setAttribute('aria-label', `观看视频：${person.name}的能力与使用方式`);
-    videoEntry.innerHTML = `<span class="video-entry-play" aria-hidden="true">${iconMarkup('video-play')}</span><span class="video-entry-title">${escapeHtml(person.name)}的能力与使用方式</span><span class="video-entry-action">观看视频${iconMarkup('chevron-left')}</span>`;
-  }
   const entries = Array.from({ length: Math.min(profileTaskBatchSize, tasks.length) }, (_, slot) => {
     const index = (offset + slot) % tasks.length;
     const task = tasks[index];
@@ -474,13 +485,16 @@ function renderProfileTaskEntries(person) {
     button.className = 'expert-task';
     button.dataset.taskIndex = index;
     button.title = task.prompt;
-    button.innerHTML = iconMarkup('task-arrow');
     const label = document.createElement('span');
     label.textContent = task.label;
-    button.append(label);
+    const arrow = document.createElement('span');
+    arrow.className = 'expert-task-arrow';
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.innerHTML = iconMarkup('task-arrow');
+    button.append(label, arrow);
     return button;
   });
-  profileTasks.replaceChildren(...entries, videoEntry);
+  profileTasks.replaceChildren(...entries);
   refreshProfileTasks.disabled = tasks.length <= profileTaskBatchSize;
 }
 
@@ -491,7 +505,7 @@ refreshProfileTasks.addEventListener('click', () => {
   const next = ((profileTaskOffsets.get(person.id) || 0) + profileTaskBatchSize) % tasks.length;
   profileTaskOffsets.set(person.id, next);
   renderProfileTaskEntries(person);
-  taskDraftStatus.textContent = '已更换三个案例，点击案例可填入任务。';
+  taskDraftStatus.textContent = '已更换四个案例，点击案例可填入任务。';
 });
 
 function fillExpertTask(index) {
@@ -505,13 +519,10 @@ function fillExpertTask(index) {
   businessContent.dispatchEvent(new CustomEvent('expertpromptselect', { bubbles: true, detail: { profileId: id, label: task.label, prompt: task.prompt } }));
 }
 profileTasks.addEventListener('click', event => {
-  if (event.target.closest('[data-profile-video]')) {
-    openProfileVideo();
-    return;
-  }
   const button = event.target.closest('[data-task-index]');
   if (button) fillExpertTask(Number(button.dataset.taskIndex));
 });
+profileVideo.addEventListener('click', openProfileVideo);
 
 function openProfileVideo() {
   const person = selectedExecutor();
@@ -525,42 +536,8 @@ function openProfileVideo() {
   if (player) player.src = source;
 }
 
-function renderWelcomeQuestion(animate = false) {
-  const task = profileDetails[selection.expert].tasks[welcomeQuestionIndex];
-  welcomeQuestion.dataset.taskIndex = String(welcomeQuestionIndex);
-  welcomeQuestion.setAttribute('aria-label', `填入任务：${task.label}`);
-  welcomeQuestionText.textContent = task.label;
-  welcomeQuestionText.getAnimations().forEach(animation => animation.cancel());
-  if (animate && !welcomeMotionPreference.matches) {
-    welcomeQuestionText.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 240, easing: 'ease-out' });
-  }
-}
-function scheduleWelcomeQuestion() {
-  clearTimeout(welcomeQuestionTimer);
-  const tasks = profileDetails[selection.expert].tasks;
-  if (currentView !== 'expert' || document.hidden || !welcomeQuestionVisible || welcomeQuestionHovered || welcomeQuestionFocused || welcomeMotionPreference.matches || tasks.length < 2) return;
-  welcomeQuestionTimer = setTimeout(() => {
-    welcomeQuestionIndex = (welcomeQuestionIndex + 1) % tasks.length;
-    renderWelcomeQuestion(true);
-    scheduleWelcomeQuestion();
-  }, 6000);
-}
-function resetWelcomeQuestion() {
-  welcomeQuestionIndex = 0;
-  renderWelcomeQuestion();
-  scheduleWelcomeQuestion();
-}
-welcomeQuestion.addEventListener('click', () => fillExpertTask(Number(welcomeQuestion.dataset.taskIndex)));
-welcomeQuestion.addEventListener('pointerenter', () => { welcomeQuestionHovered = true; scheduleWelcomeQuestion(); });
-welcomeQuestion.addEventListener('pointerleave', () => { welcomeQuestionHovered = false; scheduleWelcomeQuestion(); });
-welcomeQuestion.addEventListener('focus', () => { welcomeQuestionFocused = true; scheduleWelcomeQuestion(); });
-welcomeQuestion.addEventListener('blur', () => { welcomeQuestionFocused = false; scheduleWelcomeQuestion(); });
-document.addEventListener('visibilitychange', scheduleWelcomeQuestion);
-welcomeMotionPreference.addEventListener('change', scheduleWelcomeQuestion);
 new IntersectionObserver(([entry]) => {
-  welcomeQuestionVisible = entry.isIntersecting;
-  welcomeVisual.classList.toggle('is-out-of-view', !welcomeQuestionVisible);
-  scheduleWelcomeQuestion();
+  welcomeVisual.classList.toggle('is-out-of-view', !entry.isIntersecting);
 }, { root: contentScroll, threshold: 0 }).observe(welcomeVisual);
 
 taskPrompt.addEventListener('input', event => {
@@ -1428,7 +1405,6 @@ function setContentView(view) {
   else if (work) mainContent.setAttribute('aria-label', '我的待办内容区');
   if (!directory && !work) syncTaskDraft();
   contentScroll.scrollTop = 0;
-  scheduleWelcomeQuestion();
 }
 
 function renderCapabilities() {

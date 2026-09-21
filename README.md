@@ -4,7 +4,7 @@
 
 纯静态前端交互 Demo，使用示例数据；AI 回复、语音录入、模型连接与任务执行未接入真实业务服务。
 
-本次版本：**2026-09-21**。相对上一次线上版本的变化见[更新记录](./CHANGELOG.md)。
+最新版本：**2026-09-21 · 专家介绍与案例视频区更新**。详情见[本次更新说明](./CHANGELOG.md#2026-09-21专家介绍与案例视频区更新)。
 
 开发与 AI 编程工具请先阅读：[AI Hub 视觉规范：专家、技能、数字员工与全局配色](./AI_Hub_视觉规范.md)。该独立文档汇总已确认的配色、图标映射、尺寸、组件例外与验收规则。
 
@@ -23,8 +23,8 @@
 - 左侧区域从顶部导航下方延伸到底部，紧贴左侧、无外边距、无圆角，依次为我的待办、专家·技能、专属专家 / 数字员工、示例账户。主导航“我的待办”“专家·技能”的默认文字和图标颜色为 `#111827`，选中态保留主题紫。
 - 展示 5 位专属专家与8位数字员工；仅专属专家展示最近一次提问时间；默认选中经营分析专家。
 - 列表每项左侧为Icon，右侧独立文字区：专属专家名称在上，最近一次提问时间在下；不显示“最后使用”四个字，两行左对齐、间距0。数字员工只展示名称，不显示时间或空占位；Icon与文字区垂直居中。列表项四边内边距均为 8px，高度随内容撑开，不设额外最小高度。
-- 右侧顶部介绍区：左侧为当前专家名称与完整描述，描述下方横排三个紧凑利益点标签，与标题左对齐；介绍区左右各保留 20px 内边距。右侧保留机器人和案例气泡，利益点不延伸到主视觉下方。整个介绍区直接铺在页面底色上。
-- 下方白色区域展示“专家能帮你做点什么？”的四个紧凑入口：前三个为任务案例，第四个为能力介绍视频，桌面一行四个。标题后提供“换一批”；`#mainContent` 是右侧整体区域。
+- 右侧顶部介绍区：独立的22px圆角浅蓝紫渐变板块，左侧为当前专家名称、描述与三个紧凑利益点标签；桌面上下16px、左右32px内边距。右侧为机器人和固定问候气泡，下方叠加低对比度的简化楼宇、车辆与充电桩纹理，纹理整体下移20px。
+- 下方并排展示两张独立卡片：左侧“专家能帮你做点什么？”展示两列两行共四个案例，标题行右侧提供“换一批”；右侧为当前专家的视频封面。`#mainContent` 是右侧整体区域。
 
 已实现：侧栏折叠 / 展开、分组切换、五位专家选中态、列表内部滚动、分组键盘切换、区域选择浮层、专家资料联动、任务输入框演示交互，以及专家·技能目录与使用流程。
 
@@ -36,14 +36,26 @@
 
 ## 顶部专家介绍区
 
-- 主标题直接展示当前专家名称，例如“经营分析专家”“智慧价格专家”；不再展示“TeldHub, 你的……超级助手”、品牌下划线或标题左侧的专家图标。标题桌面 44px、字重 600，原顶部白色胶囊小标题继续保留。
+- 主标题直接展示当前专家名称，例如“经营分析专家”“智慧价格专家”；不再展示“TeldHub, 你的……超级助手”、品牌下划线或标题左侧的专家图标。标题桌面44px、字重600；上方小标题采用32px独立圆形星芒＋浅紫胶囊文字。
 - 标题下方展示 `profileDetails` 中当前专家的描述，与大标题间距 4px，使用 15px / 26px 辅助灰色，不在白色案例卡片中重复展示。经营分析专家介绍精简为“分析充电量、收入与用户变化，定位异常原因，提供运营建议。”。
-- 三个能力与利益点位于左侧专家描述下方，改为仅含 18px 图标与 14px / 400 标题的短标签，移除详细描述和图标外圈。标签按内容宽度横排、不拉伸填满，每项高 36px，采用半透明白底、无描边、8px 圆角，上下 6px、左右 12px 内边距；图文间距 6px，标签间距 8px。不可点击，空间不足时自然换行。
-- 顶部介绍直接铺在 `#EDF1FC` 底色上，保留柔白、淡紫和淡青光晕及边缘渐隐，不增加白色外框。介绍区左右内边距均为 20px，小标题、专家名称、描述和利益点共用左对齐线，避免贴近内容区边缘。左侧介绍与右侧主视觉仍采用两列；仅案例卡片上移 12px，抵消两块之间原有的 12px 容器间距，介绍区内部间距不变。
-- 右侧继续展示 250px 透明机器人和案例气泡；气泡与图片使用 12px 间距。气泡为 `#FFFFFF 70%` 填充、1px 纯白描边、16px 圆角及圆润尖角，标题 14px / 600、正文 15px / 600，星星与箭头使用主题紫。
-- 气泡复用当前专家的任务案例，每 6 秒轮播，切换专家从第一条开始；点击填入底部输入框，保留输入前后页面滚动位置，不自动提交。悬停、聚焦、页面隐藏或移出可视区时暂停；系统设置减少动态效果时关闭自动轮播和机器人漂浮。
+- 三个能力与利益点位于左侧专家描述下方，改为仅含 18px Solar Bold 面型图标与 14px / 600 标题（`#667085`）的短标签，移除详细描述和图标外圈。标签按内容宽度横排、不拉伸填满，每项高 36px，采用纯白底、无描边、`0 3px 10px #5552FF 7%` 淡紫投影、8px 圆角，上下 6px、左右 12px 内边距；图文间距 6px，标签间距 8px。图标使用橙、蓝、青绿、玫瑰粉等丰富配色，由 `benefitIconColors` 按语义固定映射，不随排列位置改变、不局限于主题紫。不可点击，空间不足时自然换行。
+- 顶部介绍为独立22px圆角板块，桌面上下16px、左右32px内边距、最小高度272px，使用112deg浅色渐变 `#FCFCFF → #F3F5FF → #E8F0FF → #E4EAFF`，叠加柔白与淡青光影，1px白色90%描边、无投影。左侧介绍与右侧主视觉采用两列，下方案例卡片与其间距16px。内容区不超过1100px时上下20px、左右24px，最小高度244px；不超过600px时四边20px、高度随内容自然撑开。
+- 背景下部和右侧使用本地 `assets/expert-charging-texture.png`，由网关参考用户确认的局部图片生成。仅有简化的半透明楼宇方块、车辆与充电桩，低细节、哑光、浅蓝紫，不使用写实街景、反射或复杂建筑。整体65%不透明度，左侧与顶部渐隐；仅作装饰，不接受交互。
+- 右侧继续展示250px透明机器人，视觉布局层压缩至238px并垂直居中，为浮动预留空间；气泡与图片间距12px；这组主视觉整体左移20px（内容区≤900px时12px，≤600px取消偏移），减少对背景车辆和充电桩的遮挡。气泡为 `#FFFFFF 70%` 填充、1px纯白描边、16px圆角及圆润尖角；“Hi! 👋”18px / 600、主题紫，后一句15px / 600。
+- 气泡固定显示“Hi! 👋 / 有什么可以帮你的吗？”，使用普通段落；取消案例轮播、星星、点击箭头、点击填入与悬停状态，不进入Tab焦点顺序。切换任何专家或专家团后文案均保持固定；下方案例仍可点击填入。
 - 机器人保留 4.8 秒循环、向上 8px 的漂浮效果。较窄内容区缩小插画并调整气泡排布；600px 以下隐藏装饰插画，保留气泡和完整专家信息。
-- 插画通过用户指定的 Codex 网关生成，文件为 `assets/welcome-robot.png`，1254 × 1254px、RGBA 透明背景。标题、描述、利益点、案例和视频入口名称随专家 / 专家团同步更新；所有 SVG 继续引用 `assets/icons/` 本地文件。
+- 机器人插画通过用户指定的 Codex 网关生成，文件为 `assets/welcome-robot.png`，1254 × 1254px、RGBA透明背景。新增场景纹理为独立的本地PNG装饰，不属于功能图标库。标题、描述、利益点、案例和视频入口名称随专家 / 专家团同步更新；功能SVG继续引用 `assets/icons/` 本地文件。
+
+<details>
+<summary>充电场景纹理的生成方式与最终提示词</summary>
+
+方式：Codex Gateway Imagegen，使用用户确认的局部截图作为风格参考。最终资源：`assets/expert-charging-texture.png`。只生成背景纹理，气泡、文字与机器人仍是页面中的独立元素。
+
+```text
+Use case: stylized-concept. The supplied image is a STYLE REFERENCE. Generate ONLY a very faint simplified background texture matching the little car, charger and buildings along the bottom of this reference. Do NOT recreate the foreground robot, the speech bubble, text, handwriting, frame, or UI. The reference background objects are intentionally primitive soft 3D shapes, almost flat monochrome silhouettes, not realistic objects. Match that exact low-detail rendering: a small toy-like white car with simple solid lavender windows, perfectly round plain wheels, no spokes, no grille detail, no headlight detail, no seams, no badge, no reflections. Beside it is a tall pale periwinkle rounded cuboid charging pedestal with one simple white lightning symbol and a smaller socket post with a simple curved cable. A few translucent rectangular building blocks at lower left, no individual windows, no detailed facades. Shapes are matte milky translucent pastel plastic with broad soft gradients and rounded edges, very low contrast. Everything should be soft, ghosted and desaturated, looking like a decorative UI background, not a scene photograph. Palette almost white, pale lavender, light icy blue. Put the simplified vehicle and charging posts close together at the far bottom-right, occupying the bottom 34 percent and rightmost 42 percent of the image. A small pair of abstract building blocks at lower center-left. Lots of empty softly luminous white-blue background above and to the left. Very subtle low flowing translucent wave along the bottom. No ground reflection, no streets, no trees, no glass skyscrapers, no realistic architecture, no photographic materials, no complex details, no outlines, no robot, no people, no words, no UI, no border. All objects gently fade into pale fog at their bases. This is a texture behind a separate foreground robot; the reference background softness and simplicity are essential.
+```
+
+</details>
 
 <details>
 <summary>机器人插画生成提示词</summary>
@@ -57,7 +69,7 @@ Use case: stylized-concept. Asset type: a single high fidelity 3D illustration f
 ### 车型复盘专家
 
 - 侧栏新增第 5 位“车型复盘专家”，介绍为“输入车牌号或车架号，查清爱车信息；车型不对，帮你提交更正申请。”利益点为“查爱车信息 / 看认证状态 / 申请改车型”。文案由用户提供的功能说明转为用户日常表达，不直接复制内部需求措辞。
-- 沿用专家介绍、三案例＋末位视频、换一批、气泡轮播与底部输入框；共 6 条车型查询、认证核对与纠错案例。目录归属“车辆服务”，侧栏、目录、引用选择与任务详情同步使用同一身份。
+- 沿用专家介绍、三案例＋末位视频、换一批、固定问候气泡与底部输入框；共6条车型查询、认证核对与纠错案例。目录归属“车辆服务”，侧栏、目录、引用选择与任务详情同步使用同一身份。
 - 车辆查询与更正仍是本地交互演示，不连接真实车辆服务、不提交申请；更正语义为“提交申请、等待审核”，不展示已直接修改车型的结果。
 - 原设备诊断专家统一更名为“故障诊断专家”，保留 `device_expert` 标识、青绿底座与心形心电图，不更改“设备故障诊断”技能的名称。
 
@@ -94,14 +106,14 @@ Use case: stylized-concept. Asset type: a single high fidelity 3D illustration f
 
 ## 专家案例与视频区
 
-- 白色卡片展示“专家能帮你做点什么？”标题和紧凑圆角矩形入口，移除右侧独立大视频封面。外层 22px 圆角、四周 16px 内边距，标题与入口间距 16px；入口之间间距 10px。
-- 五位专家和四个专家团均采用“1 个视频 + 3 个案例”，桌面一行四个。内容区不超过 900px 时为两列、不超过 400px 时为单列。
-- “换一批”紧跟标题，复用本地 `task-regenerate.svg` 图标。每位专家 / 专家团有 6 条案例，每次切换 3 条、两批循环；各自记住当前批次。换批保留末位视频和已有输入草稿，点击任一批次的案例均回填对应完整文案。
-- 案例标题 20px / 600、行高 28px，前方为用户提供的 24px MingCute AI 消息图标，渐变为 135°、`#5552FF → #8C52FF`，图文间距 6px。
-- 普通案例使用浅灰紫底色、最小高度 56px、四边统一 12px 内边距（窄屏保持一致），文案 14px / 22px。案例和视频入口均固定为 12px 圆角矩形。箭头位于文字前方，点击仅回填底部输入框并聚焦，不保留选中描边、底色或按下状态；每位专家保留独立草稿，继续派发 `expertpromptselect` 事件。
-- 末位视频入口采用浅紫底色、渐变圆形播放图标、当前专家的“能力与使用方式”标题和“观看视频”标识。标识右侧使用不带横线的右箭头，复用本地 `chevron-left.svg` 并旋转 180°，图文间距 2px。视频按钮使用独立事件，不填入输入框、不改变草稿。
-- 点击视频打开独立的观看弹窗，复用现有原生 dialog，支持关闭按钮、Esc 和遮罩关闭，关闭后回到视频入口；已有视频会停止播放。每个专家的资源路径在 `profileDetails` 的 `videoSrc` 中维护，专家团映射时同样保留该字段。配置本地视频相对路径后使用浏览器原生 16:9 播放器（controls、playsinline），无需额外视频依赖或封面图片。
-- 当前尚未提供实际视频，`videoSrc` 为空，弹窗明确显示“视频即将上线”；不伪造播放、时长或进度。已有 `assets/icons/video-play.svg` 继续本地独立引用。
+- 案例和视频为同一行的两张独立卡片，外层 `expert-resources` 只负责布局，不加白色底。左侧案例卡自适应剩余宽度，右侧视频约占36%，桌面列宽限制为340–480px；卡片间距16px、顶部对齐、圆角均为22px。并排时视频封面为16:9，不被左侧案例高度拉伸。
+- 案例卡四边16px内边距，标题20px / 600、前方保留24px本地渐变AI消息图标。“换一批”在标题行右侧。
+- 五位专家和四个专家团每次展示四个案例，两列两行，格子间距10px；每位仍保留六条候选案例，换批以四条为步长循环，各自记录偏移，不修改输入草稿。
+- 案例最小高76px、四边16px内边距、12px圆角、浅色填充与固定细描边；文案14px / 22px、最多两行，悬停可查看完整文字，点击回填完整问题。箭头移至右侧28px浅紫圆底内，不保留选中态。
+- 右侧整张封面均可点击，展示“TeldHub 使用视频”、当前专家名称、能力与使用方式说明和正中心的白色播放按钮。封面增加1px纯白描边；左上角文字距顶部和左侧均24px，左下角主副标题距底部和左右均24px，副标题14px / 22px；标题与说明固定在底部，专家图标降为浅色背景装饰，移除重复的右下角观看标签。封面用CSS浅蓝紫渐变、装饰圆环及对应的本地面型专家SVG组成，不需要额外位图或外部素材；切换专家时名称、图标、可访问名称与视频资源同步更新。
+- 内容区不超过900px时两张卡片上下排列，视频铺满可用宽度、高240px、不限制比例，案例仍为两列；不超过500px时案例单列。短屏继续沿用正文滚动与底部悬浮输入框渐隐，不压缩视频到案例入口里。
+- 点击视频打开独立观看弹窗，不填入输入框、不改变草稿；支持关闭按钮、Esc与遮罩关闭，关闭后焦点回到视频封面。视频源在 `profileDetails.videoSrc` 维护，配置后使用浏览器原生16:9播放器，无额外依赖。
+- 当前尚未提供实际视频，弹窗显示“视频即将上线”，不伪造时长或播放进度。播放图标复用本地 `assets/icons/video-play.svg`。
 
 ## 任务输入框
 
@@ -177,6 +189,7 @@ AI Hub/
     ├── AIHubLOGO.svg
     ├── teldhub-mark.svg
     ├── welcome-robot.png
+    ├── expert-charging-texture.png # 顶部浅色半透明充电场景纹理
     └── icons/                 # 每个图标一个独立 SVG 文件
         ├── account-models.svg
         ├── analysis-filled.svg
@@ -235,9 +248,13 @@ AI Hub/
 | 本地文件 | 来源 | 用途 |
 | --- | --- | --- |
 | `vehicle-filled.svg` | 用户提供 `TabIcon.svg` | 车型复盘专家，蓝色圆底＋白色汽车 |
-| `benefit-vehicle.svg` | [wheel-linear](https://yesicon.app/zh-Hans/solar/wheel-linear) | 查爱车信息 |
-| `benefit-vehicle-auth.svg` | [shield-check-linear](https://yesicon.app/zh-Hans/solar/shield-check-linear) | 看认证状态 |
-| `benefit-vehicle-correction.svg` | [pen-new-square-linear](https://yesicon.app/zh-Hans/solar/pen-new-square-linear) | 申请改车型 |
+| `benefit-vehicle.svg` | [wheel-bold](https://yesicon.app/zh-Hans/solar/wheel-bold) | 查爱车信息 |
+| `benefit-vehicle-auth.svg` | [shield-check-bold](https://yesicon.app/zh-Hans/solar/shield-check-bold) | 看认证状态 |
+| `benefit-vehicle-correction.svg` | [pen-new-square-bold](https://yesicon.app/zh-Hans/solar/pen-new-square-bold) | 申请改车型 |
+
+五位专属专家及四个专家团的利益点统一采用 Solar Bold 面型，按 `benefitIcons` 显式映射。专用 `benefit-*.svg` 均已下载对应 Bold 版本，根元素 `data-icon` 记录具体来源；智慧定价、竞品分析、用户运营、促销运营及协同类复用现有本地 `*-filled.svg`。不修改其他场景使用的线型资源，不给利益点图标加圆形底座。
+
+故障诊断专家的利益点采用更简洁的面型：故障诊断使用 `benefit-diagnosis.svg`（[Solar danger-triangle-bold](https://yesicon.app/zh-Hans/solar/danger-triangle-bold)，实心警示三角），离线巡检使用 `benefit-offline.svg`（[Solar cloud-cross-bold](https://yesicon.app/zh-Hans/solar/cloud-cross-bold)，实心离线云）。均为480 Design / CC BY 4.0，通过Iconify下载后本地引用，保留橙色与蓝色。专家身份图标和第三项工单建议保持原样。
 
 ### 新增或替换图标
 
