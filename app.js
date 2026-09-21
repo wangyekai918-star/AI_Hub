@@ -1,23 +1,71 @@
 /* 原型中的侧栏名单与框架交互；区域选择在文件末尾单独维护。 */
+const expertTimeSeed = Date.now();
 const groups = {
   expert: [
-    { id: 'ops_expert', name: '经营分析专家', icon: 'analysis', date: '09-07', color: 'blue' },
-    { id: 'price_expert', name: '智慧价格专家', icon: 'price', date: '09-07', color: 'violet' },
-    { id: 'user_expert', name: '用户运营专家', icon: 'users', date: '09-06', color: 'orange' },
-    { id: 'device_expert', name: '设备诊断专家', icon: 'cardiogram', date: '09-05', color: 'teal' }
+    { id: 'ops_expert', name: '经营分析专家', icon: 'analysis', lastAskedAt: expertTimeSeed - 3 * 60000, color: 'blue' },
+    { id: 'price_expert', name: '智慧价格专家', icon: 'price', lastAskedAt: expertTimeSeed - 24 * 60 * 60000, color: 'violet' },
+    { id: 'user_expert', name: '用户运营专家', icon: 'users', lastAskedAt: expertTimeSeed - 10 * 60000, color: 'orange' },
+    { id: 'device_expert', name: '故障诊断专家', icon: 'cardiogram', lastAskedAt: expertTimeSeed - 2 * 24 * 60 * 60000, color: 'teal' },
+    { id: 'vehicle_expert', name: '车型复盘专家', icon: 'vehicle', lastAskedAt: expertTimeSeed - 2 * 60 * 60000, color: 'blue' }
   ],
   employee: [
-    { id: 'operating_employee', name: '经营诊断', icon: 'analysis', date: '09-07', color: 'blue' },
-    { id: 'pricing_employee', name: '智慧价格', icon: 'price', date: '09-07', color: 'violet' },
-    { id: 'promotion_employee', name: '促销运营', icon: 'promotion', date: '09-07', color: 'orange' },
-    { id: 'competition_employee', name: '竞争洞察', icon: 'competition', date: '09-06', color: 'teal' },
-    { id: 'site_service_employee', name: '现场服务', icon: 'station', date: '09-06', color: 'blue' },
-    { id: 'device_employee', name: '设备管理', icon: 'device', date: '09-05', color: 'teal' },
-    { id: 'sentiment_employee', name: '舆情回复', icon: 'message', date: '09-03', color: 'violet' },
-    { id: 'monitoring_guard_employee', name: '监控值守', icon: 'monitor', date: '09-07', color: 'orange' }
+    { id: 'operating_employee', name: '经营诊断', icon: 'analysis', color: 'blue' },
+    { id: 'pricing_employee', name: '智慧价格', icon: 'price', color: 'violet' },
+    { id: 'promotion_employee', name: '促销运营', icon: 'promotion', color: 'orange' },
+    { id: 'competition_employee', name: '竞争洞察', icon: 'competition', color: 'teal' },
+    { id: 'site_service_employee', name: '现场服务', icon: 'station', color: 'blue' },
+    { id: 'device_employee', name: '设备管理', icon: 'device', color: 'teal' },
+    { id: 'sentiment_employee', name: '舆情回复', icon: 'message', color: 'violet' },
+    { id: 'monitoring_guard_employee', name: '监控值守', icon: 'monitor', color: 'orange' }
   ]
 };
-// 专家团只从能力中心进入，侧栏仍保留原有四位专属专家。
+// 首次初始化历史示例时间，后续恢复已保存的时间，避免刷新将示例专家重新排到前面。
+const expertQuestionStorageKey = 'ai-hub-expert-last-asked-v1';
+const expertQuestionTimes = readExpertQuestionTimes();
+groups.expert.forEach(person => {
+  if (expertQuestionTimes[person.id]) person.lastAskedAt = expertQuestionTimes[person.id];
+  else expertQuestionTimes[person.id] = person.lastAskedAt;
+});
+try { localStorage.setItem(expertQuestionStorageKey, JSON.stringify(expertQuestionTimes)); } catch { /* 本地存储不可用时，继续使用页面内存。 */ }
+function readExpertQuestionTimes() {
+  const values = Object.create(null);
+  try {
+    const saved = JSON.parse(localStorage.getItem(expertQuestionStorageKey) || '{}');
+    groups.expert.forEach(person => {
+      const timestamp = saved?.[person.id];
+      if (typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0 && timestamp <= Date.now()) values[person.id] = timestamp;
+    });
+  } catch { /* 本地存储不可用时，继续使用当前页面的时间。 */ }
+  return values;
+}
+function formatExpertLastAsked(timestamp, now = Date.now()) {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return '';
+  const elapsed = Math.max(0, now - timestamp);
+  const minute = 60000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (elapsed < minute) return '刚刚';
+  if (elapsed < hour) return `${Math.floor(elapsed / minute)}分钟前`;
+  if (elapsed < day) return `${Math.floor(elapsed / hour)}小时前`;
+  if (elapsed < 30 * day) return `${Math.floor(elapsed / day)}天前`;
+  const date = new Date(timestamp);
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+function expertQuestionTimeMarkup(person) {
+  const label = formatExpertLastAsked(person.lastAskedAt);
+  if (!label) return '';
+  const date = new Date(person.lastAskedAt);
+  return `<span class="person-last-asked"><time datetime="${date.toISOString()}" title="${date.toLocaleString('zh-CN', { hour12: false })}">${label}</time></span>`;
+}
+function recordExpertQuestion(expertId) {
+  const person = groups.expert.find(item => item.id === expertId);
+  if (!person) return; // 专家团与数字员工不套用专属专家的时间规则。
+  person.lastAskedAt = Date.now();
+  expertQuestionTimes[expertId] = person.lastAskedAt;
+  try { localStorage.setItem(expertQuestionStorageKey, JSON.stringify(expertQuestionTimes)); } catch { /* 仍保留本页记录。 */ }
+  updateExpertQuestionTimes();
+}
+// 专家团只从能力中心进入，侧栏展示五位专属专家。
 groups.team = [
   { id: 'ops_team', name: '智慧运营专家团', icon: 'ops-collaboration', color: 'blue' },
   { id: 'growth_team', name: '经营提升专家团', icon: 'business-growth', color: 'violet' },
@@ -27,10 +75,10 @@ groups.team = [
 function selectedExecutor() {
   return [...groups.expert, ...groups.team].find(person => person.id === selection.expert);
 }
-/* 专家介绍、能力点与任务文案均使用 TeldHub v5 原型原文。 */
+/* 专家介绍、能力点与任务文案基于 TeldHub v5，经营分析介绍按设计评审精简，车型复盘按功能说明转为面向用户的文案。 */
 const profileDetails = {
   "ops_expert": {
-    "description": "围绕充电量、服务费收入、用户结构和时段分布等经营数据开展分析，识别异常对象、趋势变化和主要影响因素，并输出面向运营动作的结论。",
+    "description": "分析充电量、收入与用户变化，定位异常原因，提供运营建议。",
     "benefits": [
       "数据查询",
       "经营分析",
@@ -58,10 +106,11 @@ const profileDetails = {
         "prompt": "对比各场站高峰与平峰经营表现，识别可提升的运营机会。"
       },
       {
-        "label": "生成济南公司本周经营复盘，并输出下周行动清单。",
-        "prompt": "生成济南公司本周经营复盘，并输出下周行动清单。"
+        "label": "按工作日与周末对比各场站订单表现，识别增长机会。",
+        "prompt": "按工作日与周末对比各场站订单表现，识别增长机会。"
       }
-    ]
+    ],
+    "videoSrc": ""
   },
   "price_expert": {
     "description": "结合竞品价格、历史量价关系、场站时段特征和收益测算结果，形成价格诊断、调价空间分析和调价策略建议。",
@@ -92,10 +141,11 @@ const profileDetails = {
         "prompt": "测算服务费上调0.02元/度对充电量和收益的可能影响。"
       },
       {
-        "label": "复盘最近已执行调价策略，筛选值得继续复制的策略。",
-        "prompt": "复盘最近已执行调价策略，筛选值得继续复制的策略。"
+        "label": "对比不同调价方案的预计收益，推荐优先验证的方案。",
+        "prompt": "对比不同调价方案的预计收益，推荐优先验证的方案。"
       }
-    ]
+    ],
+    "videoSrc": ""
   },
   "user_expert": {
     "description": "围绕新用户复充、流失用户召回、沉睡用户唤醒等场景进行人群识别、分层分析和运营策略设计，支持活动复盘。",
@@ -126,10 +176,24 @@ const profileDetails = {
         "prompt": "分析不同用户群的充电时段偏好，形成精细化运营建议。"
       },
       {
-        "label": "复盘最近一次用户促销活动，识别高转化与低转化人群。",
-        "prompt": "复盘最近一次用户促销活动，识别高转化与低转化人群。"
+        "label": "分析首充用户的复充周期，推荐合适的触达时间。",
+        "prompt": "分析首充用户的复充周期，推荐合适的触达时间。"
       }
-    ]
+    ],
+    "videoSrc": ""
+  },
+  "vehicle_expert": {
+    "description": "输入车牌号或车架号，查清爱车信息；车型不对，帮你提交更正申请。",
+    "benefits": ["查爱车信息", "看认证状态", "申请改车型"],
+    "tasks": [
+      { "label": "帮我查一下爱车的品牌和车型。", "prompt": "我想用车牌号查询爱车的品牌和车型，需要提供哪些信息？" },
+      { "label": "看看我的爱车认证通过了吗？", "prompt": "帮我查看爱车是否已通过认证，以及当前认证的车型。" },
+      { "label": "车型显示不对，帮我申请修改。", "prompt": "我的爱车车型显示不对，想改成正确的车型，请帮我准备更正申请。" },
+      { "label": "用车架号能查到我的车型吗？", "prompt": "我想用车架号（VIN）查询车辆的品牌和车型，应该怎么操作？" },
+      { "label": "识别出的车型和认证车型一样吗？", "prompt": "帮我对比系统识别出的车型和爱车认证车型，看看有没有不一致的地方。" },
+      { "label": "查到好几个车型，帮我核对一下。", "prompt": "系统识别出了几个可能的车型，帮我列出来，核对哪个与我的爱车一致。" }
+    ],
+    "videoSrc": ""
   },
   "device_expert": {
     "description": "结合设备状态、故障类型、在线情况、历史工单和运行数据，对设备异常进行诊断并形成处置建议。",
@@ -160,37 +224,38 @@ const profileDetails = {
         "prompt": "关联历史工单，诊断当前重点设备异常的可能故障链路。"
       },
       {
-        "label": "分析设备异常对场站经营指标的影响，并给出处理建议。",
-        "prompt": "分析设备异常对场站经营指标的影响，并给出处理建议。"
+        "label": "对比各场站设备可用率，生成本周巡检重点清单。",
+        "prompt": "对比各场站设备可用率，生成本周巡检重点清单。"
       }
-    ]
+    ],
+    "videoSrc": ""
   }
 };
-// 专家团介绍及案例沿用 v5 的 expertProfiles（含末尾脚本补充的数据）。
+// 专家团介绍来自 v5；保留基础案例并补充同场景示例供换批展示。
 const teamProfileData = {
   ops_team: {
     description: '由经营、价格、用户、设备等多位专家协同完成复杂经营任务，适合综合诊断、经营提升和管理视角汇报。',
     benefits: ['综合经营', '多专家协同', '经营提升'],
-    tasks: ['全面分析济钢充电站最近7天充电量变化趋势、原因及建议动作。', '围绕经营下滑问题，综合分析价格、用户和设备因素，形成闭环方案。', '为济南公司生成一份经营专题分析，包含重点问题、原因和改善建议。']
+    tasks: ['全面分析济钢充电站最近7天充电量变化趋势、原因及建议动作。', '围绕经营下滑问题，综合分析价格、用户和设备因素，形成闭环方案。', '汇总重点场站本周经营变化，生成运营例会简报。', '关联价格、用户和设备数据，定位服务费收入下降原因。', '识别低效时段的经营机会，给出多专家协同建议。', '对比改善前后的运营表现，复盘本周重点措施。']
   },
   growth_team: {
     description: '围绕场站收益提升目标，由经营、价格和用户专家协同分析机会、形成策略并评估影响。',
     benefits: ['经营分析', '价格策略', '用户增长'],
-    tasks: ['分析当前最值得优先提升的场站，并形成经营提升方案。', '综合价格、用户和经营表现，识别本周收益提升机会。', '针对经营低迷场站生成可执行的改善任务。']
+    tasks: ['分析当前最值得优先提升的场站，并形成经营提升方案。', '综合价格、用户和经营表现，识别本周收益提升机会。', '对比各场站量价表现，筛选可以改善收益的时段。', '结合用户需求与价格策略，生成低谷时段增长建议。', '分析经营改善措施的执行结果，找出可复制的做法。', '测算重点场站收益提升空间，给出分阶段行动计划。']
   },
   user_growth_team: {
     description: '由用户、价格和促销运营专家协同完成新客转化、沉睡唤醒和流失召回等增长任务。',
     benefits: ['用户运营', '价格策略', '促销运营'],
-    tasks: ['分析新用户复充转化问题，并形成协同增长方案。', '识别高价值沉睡用户并制定分层召回策略。', '复盘最近促销活动并提出下一轮增长动作。']
+    tasks: ['分析新用户复充转化问题，并形成协同增长方案。', '识别高价值沉睡用户并制定分层召回策略。', '分析新客首充后的流失节点，提出转化改进措施。', '结合充电偏好与价格敏感度，生成用户分群方案。', '复盘近期召回活动，识别适合持续触达的用户群。', '设计工作日低谷时段活动，预测目标用户与转化机会。']
   },
   device_team: {
     description: '聚焦设备健康、离线终端、工单流转和运维处置，通过多能力协同完成设备问题识别、分析和闭环执行。',
     benefits: ['设备健康', '协同处置', '工单闭环'],
-    tasks: ['定位济钢充电站重点设备异常，并形成处置建议。', '针对高频故障终端开展多维诊断，输出修复优先级。', '分析近7天设备异常对经营的影响，并生成专项结论。']
+    tasks: ['定位济钢充电站重点设备异常，并形成处置建议。', '针对高频故障终端开展多维诊断，输出修复优先级。', '结合故障频次与经营影响，生成优先维修清单。', '分析维修后的设备表现，检查故障是否反复出现。', '汇总本周设备健康情况，生成运维例会简报。', '对比各站点设备可用率，提出下周巡检计划。']
   }
 };
 Object.entries(teamProfileData).forEach(([id, details]) => {
-  profileDetails[id] = { ...details, tasks: details.tasks.map(prompt => ({ label: prompt, prompt })) };
+  profileDetails[id] = { ...details, videoSrc: '', tasks: details.tasks.map(prompt => ({ label: prompt, prompt })) };
 });
 
 // 列表取自 v5 最终生效的 abilitySceneData + capabilityMeta，而非早期 capData。
@@ -198,7 +263,8 @@ const capabilityCatalog = [
   { id: 'ops_expert', type: 'expert', name: '经营分析专家', scene: '经营分析', icon: 'analysis-filled', color: 'blue', description: '识别经营异常、拆解经营缺口并定位主要影响因素。', tags: ['经营诊断', '异常归因', '经营复盘'], meta: '8个核心技能', usage: '128.6万', authorized: true, profileId: 'ops_expert' },
   { id: 'price_expert', type: 'expert', name: '智慧价格专家', scene: '智慧价格', icon: 'price-filled', color: 'violet', description: '结合竞品价格、需求和收益预测形成价格策略建议。', tags: ['智慧定价', '竞品分析', '收益测算'], meta: '6个核心技能', usage: '96.4万', authorized: true, profileId: 'price_expert' },
   { id: 'user_expert', type: 'expert', name: '用户运营专家', scene: '用户运营', icon: 'users-filled', color: 'orange', description: '识别新用户、沉睡和流失人群，形成分层运营策略。', tags: ['新客转化', '流失召回', '沉睡唤醒'], meta: '7个核心技能', usage: '88.1万', authorized: false, profileId: 'user_expert' },
-  { id: 'device_expert', type: 'expert', name: '设备诊断专家', scene: '设备运维', icon: 'cardiogram-filled', color: 'teal', description: '结合设备状态、故障类型和历史工单定位设备问题。', tags: ['故障诊断', '离线巡检', '工单建议'], meta: '9个核心技能', usage: '73.2万', authorized: true, profileId: 'device_expert' },
+  { id: 'device_expert', type: 'expert', name: '故障诊断专家', scene: '设备运维', icon: 'cardiogram-filled', color: 'teal', description: '结合设备状态、故障类型和历史工单定位设备问题。', tags: ['故障诊断', '离线巡检', '工单建议'], meta: '9个核心技能', usage: '73.2万', authorized: true, profileId: 'device_expert' },
+  { id: 'vehicle_expert', type: 'expert', name: '车型复盘专家', scene: '车辆服务', icon: 'vehicle-filled', color: 'blue', description: '查清爱车的品牌、车型和认证状态，车型不对时帮你申请更正。', tags: ['查爱车信息', '看认证状态', '申请改车型'], meta: '3项服务', authorized: true, profileId: 'vehicle_expert' },
   { id: 'ops_team', type: 'team', name: '智慧运营专家团', scene: '经营分析', icon: 'ops-collaboration-filled', color: 'blue', description: '经营、价格、用户、设备专家协同完成复杂经营任务。', tags: ['经营分析', '智慧价格', '用户运营', '设备运维'], meta: '4位专家协作', usage: '152.8万', authorized: true, profileId: 'ops_team' },
   { id: 'growth_team', type: 'team', name: '经营提升专家团', scene: '智慧价格', icon: 'business-growth-filled', color: 'violet', description: '围绕收益目标综合分析价格、用户与经营策略。', tags: ['经营分析', '价格策略', '用户增长'], meta: '4位专家协作', usage: '82.3万', authorized: true, profileId: 'growth_team' },
   { id: 'user_growth_team', type: 'team', name: '用户增长专家团', scene: '用户运营', icon: 'user-growth-filled', color: 'orange', description: '用户、价格与经营专家协同完成增长和召回任务。', tags: ['用户运营', '价格策略', '促销运营'], meta: '3位专家协作', usage: '69.7万', authorized: false, profileId: 'user_growth_team' },
@@ -231,14 +297,11 @@ const benefitIcons = {
   "促销运营": "promotion",
   "设备健康": "device",
   "协同处置": "team-filled",
-  "工单闭环": "benefit-workorder"
+  "工单闭环": "benefit-workorder",
+  "查爱车信息": "benefit-vehicle",
+  "看认证状态": "benefit-vehicle-auth",
+  "申请改车型": "benefit-vehicle-correction"
 };
-/* v5 原型的 abilitySubs：四位专家的三个能力项均按此顺序展示说明。 */
-const expertBenefitDescriptions = [
-  '基于业务数据识别关键变化，并形成专业判断',
-  '结合场站、用户、价格等上下文快速定位问题',
-  '把分析结论转化为可以继续执行的运营建议'
-];
 const avatarColors = {
   blue: ['linear-gradient(145deg, #4c71f5 0%, #6aafff 100%)', '#ffffff'],
   violet: ['linear-gradient(145deg, #6550ec 0%, #9275fa 100%)', '#ffffff'],
@@ -249,7 +312,7 @@ const workspace = document.querySelector('#workspace');
 const peopleList = document.querySelector('#peopleList');
 const mainContent = document.querySelector('#mainContent');
 const contentScroll = document.querySelector('#contentScroll');
-const welcomeAssistant = document.querySelector('#welcomeAssistant');
+const welcomeTitle = document.querySelector('#welcomeTitle');
 const welcomeQuestion = document.querySelector('#welcomeQuestion');
 const welcomeQuestionText = document.querySelector('#welcomeQuestionText');
 const welcomeVisual = document.querySelector('.welcome-visual');
@@ -260,16 +323,24 @@ let welcomeQuestionHovered = false;
 let welcomeQuestionFocused = false;
 let welcomeQuestionVisible = true;
 const businessContent = document.querySelector('#businessContent');
-const profileAvatar = document.querySelector('#profileAvatar');
-const profileName = document.querySelector('#profileName');
 const profileDescription = document.querySelector('#profileDescription');
 const profileBenefits = document.querySelector('#profileBenefits');
 const profileTasks = document.querySelector('#profileTasks');
-const profileVideo = document.querySelector('#profileVideo');
-const videoProfileName = document.querySelector('#videoProfileName');
-const videoEmblem = document.querySelector('#videoEmblem');
-const suggestionsTitle = document.querySelector('#suggestionsTitle');
+const suggestionsTitleText = document.querySelector('#suggestionsTitleText');
+const refreshProfileTasks = document.querySelector('#refreshProfileTasks');
+const profileTaskOffsets = new Map();
+const profileTaskBatchSize = 3;
 const taskComposer = document.querySelector('#taskComposer');
+// 同步悬浮输入框高度，确保最后一条正文能滚过遮罩，且输入框增高时仍可查看。
+const composerLayoutObserver = new ResizeObserver(() => {
+  if (taskComposer.hidden) return;
+  const height = Math.ceil(taskComposer.getBoundingClientRect().height);
+  if (!height || mainContent.style.getPropertyValue('--composer-height') === `${height}px`) return;
+  const keepAtBottom = mainContent.classList.contains('is-task') && contentScroll.scrollHeight - contentScroll.scrollTop - contentScroll.clientHeight < 48;
+  mainContent.style.setProperty('--composer-height', `${height}px`);
+  if (keepAtBottom) requestAnimationFrame(() => { contentScroll.scrollTop = contentScroll.scrollHeight; });
+});
+composerLayoutObserver.observe(taskComposer);
 const taskPrompt = document.querySelector('#taskPrompt');
 const taskDraftStatus = document.querySelector('#taskDraftStatus');
 const taskDrafts = new Map();
@@ -283,28 +354,62 @@ let activeTask = null;
 let taskSequence = 0;
 let launchedFromCapabilities = false;
 
+function expertsByLastAsked() {
+  const timestamp = person => Number.isFinite(person.lastAskedAt) && person.lastAskedAt > 0 ? person.lastAskedAt : 0;
+  return [...groups.expert].sort((a, b) => timestamp(b) - timestamp(a));
+}
+
 function renderPeople() {
-  peopleList.innerHTML = groups[activeGroup].map(person => {
+  const people = activeGroup === 'expert' ? expertsByLastAsked() : groups[activeGroup];
+  peopleList.innerHTML = people.map(person => {
     const isExpert = activeGroup === 'expert';
     const selected = ['expert', 'task'].includes(currentView) && isExpert && selection.expert === person.id;
     const tag = isExpert ? 'button' : 'div';
     const [background, color] = avatarColors[person.color];
-    return `<${tag} ${isExpert ? `type="button" data-person="${person.id}"` : ''} class="person-row${selected ? ' is-active' : ''}" aria-label="${person.name}，最后使用 ${person.date}" ${selected ? 'aria-current="page"' : ''} title="${person.name}">
+    return `<${tag} ${isExpert ? `type="button" data-person="${person.id}"` : ''} class="person-row${selected ? ' is-active' : ''}" aria-label="${person.name}${isExpert && formatExpertLastAsked(person.lastAskedAt) ? `，${formatExpertLastAsked(person.lastAskedAt)}` : ''}" ${selected ? 'aria-current="page"' : ''} title="${person.name}">
       <span class="person-avatar" style="--avatar-bg:${background};--avatar-color:${color}"><svg class="icon" aria-hidden="true"><use href="${iconUrl(`${person.icon}-filled`)}"></use></svg></span>
       <span class="person-copy">
         <span class="person-name">${person.name}</span>
-        <span class="person-last-used">最后使用<time datetime="2026-${person.date}">${person.date}</time></span>
+        ${isExpert ? expertQuestionTimeMarkup(person) : ''}
       </span>
     </${tag}>`;
   }).join('');
   peopleList.setAttribute('aria-labelledby', `${activeGroup}Tab`);
 }
 
+
+// 更新现有节点，保留键盘焦点、选中态与侧栏滚动位置。
+function updateExpertQuestionTimes() {
+  if (activeGroup !== 'expert') return;
+  groups.expert.forEach(person => {
+    const row = peopleList.querySelector(`[data-person="${person.id}"]`);
+    if (!row) return;
+    const label = formatExpertLastAsked(person.lastAskedAt);
+    row.setAttribute('aria-label', `${person.name}${label ? '，' + label : ''}`);
+    const time = row.querySelector('.person-last-asked time');
+    if (time && label) {
+      const date = new Date(person.lastAskedAt);
+      time.textContent = label; time.dateTime = date.toISOString();
+      time.title = date.toLocaleString('zh-CN', { hour12: false });
+    } else if (label) row.querySelector('.person-copy').insertAdjacentHTML('beforeend', expertQuestionTimeMarkup(person));
+    else row.querySelector('.person-last-asked')?.remove();
+  });
+  // 发送后将最近提问的专家移到最前；相同时间保持原始顺序，无时间排末尾。
+  const focused = peopleList.contains(document.activeElement) ? document.activeElement : null;
+  const scrollTop = peopleList.scrollTop;
+  expertsByLastAsked().forEach((person, index) => {
+    const row = peopleList.querySelector(`[data-person="${person.id}"]`);
+    if (row && peopleList.children[index] !== row) peopleList.insertBefore(row, peopleList.children[index] || null);
+  });
+  if (focused && document.activeElement !== focused) focused.focus({ preventScroll: true });
+  peopleList.scrollTop = scrollTop;
+}
+setInterval(() => { if (!document.hidden) updateExpertQuestionTimes(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) updateExpertQuestionTimes(); });
+
 function updateNav() {
   const current = selectedExecutor().name;
   mainContent.setAttribute('aria-label', `${current}内容区`);
-  const specialty = current.replace(/专家团?$/, '');
-  welcomeAssistant.textContent = `你的${specialty}超级助手`;
   renderProfile();
 }
 
@@ -321,9 +426,6 @@ function syncTaskDraft(id) {
   closeComposerPopover();
   const draft = getTaskDraft(id);
   taskPrompt.value = draft.prompt;
-  profileTasks.querySelectorAll('[data-task-index]').forEach(button => {
-    button.setAttribute('aria-pressed', String(Number(button.dataset.taskIndex) === draft.index));
-  });
   updateComposer();
 }
 
@@ -331,51 +433,66 @@ function renderProfile() {
   const person = selectedExecutor();
   const details = profileDetails[person.id];
   if (renderedProfileId !== person.id) {
-    profileName.textContent = person.name;
+    welcomeTitle.textContent = person.name;
     profileDescription.textContent = details.description;
-    profileAvatar.style.setProperty('--avatar-bg', avatarColors[person.color][0]);
-    profileAvatar.style.setProperty('--avatar-color', '#fff');
-    profileAvatar.innerHTML = iconMarkup(`${person.icon}-filled`);
-    profileBenefits.classList.add('has-descriptions');
-    profileBenefits.replaceChildren(...details.benefits.map((benefit, index) => {
+    profileBenefits.replaceChildren(...details.benefits.map(benefit => {
       const item = document.createElement('li');
-      const icon = document.createElement('span');
-      icon.className = 'benefit-icon';
-      icon.innerHTML = iconMarkup(benefitIcons[benefit]);
-      const copy = document.createElement('div');
-      copy.className = 'benefit-copy';
+      item.innerHTML = iconMarkup(benefitIcons[benefit]);
       const label = document.createElement('strong');
       label.textContent = benefit;
-      copy.append(label);
-      const description = document.createElement('p');
-      description.textContent = expertBenefitDescriptions[index];
-      copy.append(description);
-      item.append(icon, copy);
+      item.append(label);
       return item;
     }));
-    suggestionsTitle.textContent = person.id.endsWith('_team') ? '专家团能帮你做什么' : '专家能帮你做什么';
-    profileTasks.replaceChildren(...details.tasks.map((task, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'expert-task';
-      button.dataset.taskIndex = index;
-      button.title = task.prompt;
-      button.innerHTML = iconMarkup('task-arrow');
-      const label = document.createElement('span');
-      label.textContent = task.label;
-      button.append(label);
-      return button;
-    }));
-    videoProfileName.textContent = person.name;
-    videoEmblem.style.setProperty('--avatar-bg', avatarColors[person.color][0]);
-    videoEmblem.innerHTML = iconMarkup(`${person.icon}-filled`);
-    profileVideo.setAttribute('aria-label', `${person.name}使用介绍视频封面，视频即将上线`);
+    suggestionsTitleText.textContent = person.id.endsWith('_team') ? '专家团能帮你做点什么？' : '专家能帮你做点什么？';
+    renderProfileTaskEntries(person);
     taskPrompt.placeholder = `例如：${details.tasks[0].prompt}`;
     renderedProfileId = person.id;
     resetWelcomeQuestion();
   }
   syncTaskDraft(person.id);
 }
+
+
+function renderProfileTaskEntries(person) {
+  const tasks = profileDetails[person.id].tasks;
+  const offset = profileTaskOffsets.get(person.id) || 0;
+  let videoEntry = profileTasks.querySelector('[data-profile-video]');
+  if (videoEntry?.dataset.profileVideo !== person.id) {
+    videoEntry = document.createElement('button');
+    videoEntry.type = 'button';
+    videoEntry.className = 'expert-task expert-video-entry';
+    videoEntry.dataset.profileVideo = person.id;
+    videoEntry.setAttribute('aria-haspopup', 'dialog');
+    videoEntry.setAttribute('aria-label', `观看视频：${person.name}的能力与使用方式`);
+    videoEntry.innerHTML = `<span class="video-entry-play" aria-hidden="true">${iconMarkup('video-play')}</span><span class="video-entry-title">${escapeHtml(person.name)}的能力与使用方式</span><span class="video-entry-action">观看视频${iconMarkup('chevron-left')}</span>`;
+  }
+  const entries = Array.from({ length: Math.min(profileTaskBatchSize, tasks.length) }, (_, slot) => {
+    const index = (offset + slot) % tasks.length;
+    const task = tasks[index];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'expert-task';
+    button.dataset.taskIndex = index;
+    button.title = task.prompt;
+    button.innerHTML = iconMarkup('task-arrow');
+    const label = document.createElement('span');
+    label.textContent = task.label;
+    button.append(label);
+    return button;
+  });
+  profileTasks.replaceChildren(...entries, videoEntry);
+  refreshProfileTasks.disabled = tasks.length <= profileTaskBatchSize;
+}
+
+refreshProfileTasks.addEventListener('click', () => {
+  const person = selectedExecutor();
+  const tasks = profileDetails[person.id].tasks;
+  if (tasks.length <= profileTaskBatchSize) return;
+  const next = ((profileTaskOffsets.get(person.id) || 0) + profileTaskBatchSize) % tasks.length;
+  profileTaskOffsets.set(person.id, next);
+  renderProfileTaskEntries(person);
+  taskDraftStatus.textContent = '已更换三个案例，点击案例可填入任务。';
+});
 
 function fillExpertTask(index) {
   const id = selection.expert;
@@ -388,9 +505,25 @@ function fillExpertTask(index) {
   businessContent.dispatchEvent(new CustomEvent('expertpromptselect', { bubbles: true, detail: { profileId: id, label: task.label, prompt: task.prompt } }));
 }
 profileTasks.addEventListener('click', event => {
+  if (event.target.closest('[data-profile-video]')) {
+    openProfileVideo();
+    return;
+  }
   const button = event.target.closest('[data-task-index]');
   if (button) fillExpertTask(Number(button.dataset.taskIndex));
 });
+
+function openProfileVideo() {
+  const person = selectedExecutor();
+  const source = profileDetails[person.id].videoSrc;
+  const title = `${person.name}的能力与使用方式`;
+  const body = source
+    ? `<video class="expert-video-player" controls playsinline preload="metadata" aria-label="${escapeHtml(title)}"></video>`
+    : `<div class="expert-video-empty" role="status"><span class="video-entry-play" aria-hidden="true">${iconMarkup('video-play')}</span><strong>视频即将上线</strong><p>上线后可在这里观看能力与使用介绍</p></div>`;
+  openComposerDialog(title, body, '', 'expert-video');
+  const player = composerDialogBody.querySelector('video');
+  if (player) player.src = source;
+}
 
 function renderWelcomeQuestion(animate = false) {
   const task = profileDetails[selection.expert].tasks[welcomeQuestionIndex];
@@ -505,6 +638,7 @@ const areaData = {
 };
 const regionSelector = document.querySelector('#regionSelector');
 const regionButton = document.querySelector('#regionButton');
+const regionType = document.querySelector('#regionType');
 const regionLabel = document.querySelector('#regionLabel');
 const regionPopover = document.querySelector('#regionPopover');
 const regionSearch = document.querySelector('#regionSearch');
@@ -519,9 +653,11 @@ let selectedArea = { type: 'company', code: 'C3701', name: areaData.company.find
 let selectionToastTimer;
 
 function renderSelectedArea() {
+  const typeLabel = selectedArea.type === 'region' ? '大区' : '公司';
+  regionType.textContent = typeLabel;
   regionLabel.textContent = selectedArea.name;
-  regionButton.title = selectedArea.name;
-  regionButton.setAttribute('aria-label', `区域选择，当前：${selectedArea.name}`);
+  regionButton.title = `${typeLabel}：${selectedArea.name}`;
+  regionButton.setAttribute('aria-label', `区域选择，当前${typeLabel}：${selectedArea.name}`);
   regionButton.dataset.areaType = selectedArea.type;
   regionButton.dataset.areaCode = selectedArea.code;
 }
@@ -693,7 +829,8 @@ const referenceChoices = {
     { label: '经营分析专家', meta: '经营异常与根因分析', icon: 'analysis', kind: 'expert' },
     { label: '智慧价格专家', meta: '价格诊断与调价策略', icon: 'price', kind: 'expert' },
     { label: '用户运营专家', meta: '用户分层与召回策略', icon: 'users', kind: 'expert' },
-    { label: '设备诊断专家', meta: '设备异常与处置建议', icon: 'cardiogram-filled', kind: 'expert' },
+    { label: '故障诊断专家', meta: '设备异常与处置建议', icon: 'cardiogram-filled', kind: 'expert' },
+    { label: '车型复盘专家', meta: '查爱车信息、核对认证与申请更正', icon: 'vehicle-filled', kind: 'expert' },
     { label: '智慧运营专家团', meta: '经营 + 设备 + 用户 + 价格', icon: 'capabilities', kind: 'expert' }
   ],
   skill: [
@@ -747,8 +884,13 @@ function resizeTaskInput() {
 }
 function updateComposerControls() {
   const draft = getTaskDraft();
-  composerSend.disabled = !draft.prompt.trim() || voiceActive || (currentView === 'task' && Boolean(activeTask?.generating));
-  profileTasks.querySelectorAll('[data-task-index]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.taskIndex) === draft.index)));
+  const generating = currentView === 'task' && Boolean(activeTask?.generating);
+  const sendLabel = generating ? '停止生成' : currentView === 'task' ? '发送' : '开始任务';
+  composerSend.disabled = !generating && (!draft.prompt.trim() || voiceActive);
+  composerSend.classList.toggle('is-stopping', generating);
+  if (!generating) document.querySelector('#composerSendLabel').textContent = sendLabel;
+  composerSend.setAttribute('aria-label', sendLabel);
+  composerSend.title = sendLabel;
   resizeTaskInput();
 }
 function updateComposer() {
@@ -1010,6 +1152,7 @@ function closeComposerDialog() {
 }
 document.querySelector('#closeComposerDialog').addEventListener('click', closeComposerDialog);
 composerDialog.addEventListener('close', () => {
+  composerDialogBody.querySelector('video')?.pause();
   // 移除表单字段，不读取或保留凭证，也不写入浏览器存储。
   composerDialogBody.replaceChildren(); composerDialogFooter.replaceChildren();
 });
@@ -1049,6 +1192,11 @@ composerDialog.addEventListener('click', event => {
   if (action === 'close') closeComposerDialog();
   else if (action === 'add-model') openCustomModelForm();
   else if (action === 'model-settings') openModelSettingsDialog();
+  else if (action === 'confirm-logout') {
+    closeComposerDialog();
+    // 静态 Demo 没有登录会话，接入鉴权服务后在此执行真实退出。
+    notifyComposer('当前页面尚未接入登录服务');
+  }
 
 });
 /* 账户入口：按提供的截图只读展示；未接入登录、计费或远程模型服务。 */
@@ -1116,6 +1264,9 @@ function openAccountModelsDialog() {
   const configured = models.filter(model => model.managed || model.custom);
   openComposerDialog('模型管理', '<p class="composer-dialog-note">配置企业自有模型后，可在任务输入框的模型列表中直接选择。</p><div class="account-model-list">' + configured.map(model => `<div class="account-model-row"><span class="account-model-icon">${iconMarkup(getModelIcon(model))}</span><div class="account-model-copy"><b>${escapeHtml(model.label)}</b><small>${escapeHtml(model.protocol || 'OpenAI Compatible')} · ${model.custom ? '待验证' : '已连接'}</small></div><span class="account-availability${model.custom ? ' pending' : ''}">${model.custom ? '待验证' : '可用'}</span></div>`).join('') + '</div>', accountDialogFooter, 'models');
 }
+function openLogoutDialog() {
+  openComposerDialog('退出登录', '<p class="composer-dialog-note">确认退出当前 TeldHub 账户？</p>', '<button type="button" data-dialog-action="close">取消</button><button type="button" class="primary" data-dialog-action="confirm-logout">退出登录</button>', 'logout');
+}
 accountArea.addEventListener('click', () => accountMenu.hidden ? openAccountMenu(accountArea) : closeAccountMenu(true));
 accountArea.addEventListener('keydown', event => {
   if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
@@ -1129,6 +1280,7 @@ accountMenu.addEventListener('click', event => {
   if (action === 'profile') openAccountProfileDialog();
   else if (action === 'account') openAccountUsageDialog();
   else if (action === 'models') openAccountModelsDialog();
+  else if (action === 'logout') openLogoutDialog();
 });
 accountMenu.addEventListener('keydown', event => {
   if (event.key === 'Tab') { closeAccountMenu(true); return; }
@@ -1173,6 +1325,7 @@ function submitComposerTask() {
       rounds: [], generating: false, deliverables: ['阶段分析结果.md', '任务数据明细.xlsx'],
       changes: initialTaskChanges.map(item => ({ ...item, time: taskTime() }))
     };
+    registerRecentTask(activeTask);
     taskDrafts.set(activeTask.draftId, { ...snapshot, prompt: '', index: -1, refs: [...snapshot.refs] });
     setContentView('task');
     appendTaskRound(activeTask, snapshot);
@@ -1185,7 +1338,10 @@ function submitComposerTask() {
     stationScope: '全部场站', references: snapshot.refs, demo: true
   } }));
 }
-composerSend.addEventListener('click', submitComposerTask);
+composerSend.addEventListener('click', () => {
+  if (currentView === 'task' && activeTask?.generating) stopTaskGeneration();
+  else submitComposerTask();
+});
 regionSelector.addEventListener('regionchange', event => {
   const scope = currentView === 'task' && activeTask ? activeTask.region : event.detail.name;
   composerRegion.textContent = scope;
@@ -1239,10 +1395,6 @@ function setContentView(view) {
   taskDetailHeader.hidden = !detail;
   taskDetailView.hidden = !detail;
   mainContent.classList.toggle('is-task', detail);
-  const sendLabel = detail ? '发送' : '开始任务';
-  composerSend.querySelector('span').textContent = sendLabel;
-  composerSend.setAttribute('aria-label', sendLabel);
-  composerSend.title = sendLabel;
   document.querySelector('#taskComposerTitle').innerHTML = iconMarkup('welcome-stars-filled') + (detail ? '继续描述你的需求' : '描述你的任务需求');
   taskPrompt.placeholder = detail ? '继续追问，或补充你的要求…' : `例如：${profileDetails[selection.expert].tasks[0].prompt}`;
   if (detail) {
@@ -1402,6 +1554,14 @@ const initialTaskChanges = [
   { title: '上下文同步', text: '将当前任务结果同步到本次对话上下文。' }
 ];
 const taskResultTemplates = {
+  vehicle: {
+    title: '爱车信息核对',
+    description: '可以帮你查询车型和认证状态，也可以整理车型更正申请所需的信息。',
+    conclusion: '当前页面尚未连接车辆信息服务，暂时不能查询真实车辆，也不会提交更正申请。下面列出了办理时需要核对的信息。',
+    columns: ['想办理的事', '需要的信息', '可以核对什么'],
+    rows: [['查询爱车', '车牌号或车架号（VIN）任选一种', '品牌、车型及系统识别出的可能车型'], ['核对认证', '对应车辆的认证记录', '认证状态与认证车型是否一致'], ['申请更正', '车辆信息及你确认的正确车型', '整理更正申请，提交后等待审核']],
+    nextSteps: ['查询时可使用车牌号或车架号（VIN），两者任选一种。', '如果车型不一致，先核对正确的品牌与车型，再发起更正申请。', '提交更正申请后需等待审核，通过后再更新车型。']
+  },
   ops: {
     title: '任务分析结果',
     description: '已结合当前业务范围、历史数据与相关能力完成第一轮分析，并将结论整理为可继续追问和执行的任务结果。',
@@ -1438,11 +1598,12 @@ const taskNextSteps = [
 ];
 function taskTime() { return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }); }
 function resultForTask(task) {
+  if (task.expert.id === 'vehicle_expert') return taskResultTemplates.vehicle;
   const text = task.prompt;
   let kind = /设备|离线|故障/.test(text) ? 'device' : /调价|价格/.test(text) ? 'price' : /用户|召回|复充|沉睡/.test(text) ? 'user' : 'ops';
   if (kind === 'ops') {
     const name = task.expert.name;
-    if (/设备/.test(name)) kind = 'device';
+    if (/设备|故障/.test(name)) kind = 'device';
     else if (/价格/.test(name)) kind = 'price';
     else if (/用户/.test(name)) kind = 'user';
   }
@@ -1455,6 +1616,7 @@ function isExecutionRequest(prompt) {
   return !/不要|暂不|先不|仅分析|只分析|只提供|不执行/.test(prompt) && /执行调价|执行方案|下发策略|发放优惠券|写入系统|确认执行|直接执行|批量重启/.test(prompt);
 }
 function appendTaskRound(task, snapshot) {
+  recordExpertQuestion(task.expert.id);
   // 新追问取代尚未批准的旧方案，避免旧审批按钮仍可执行。
   task.rounds.forEach(round => { if (round.state === 'waiting') round.state = 'superseded'; });
   const round = {
@@ -1468,23 +1630,44 @@ function appendTaskRound(task, snapshot) {
   generateTaskRound(task, round);
 }
 function generateTaskRound(task, round) {
+  clearTimeout(round.generationTimer);
   task.generating = true;
   round.state = 'generating';
   renderTaskConversation(true);
   updateComposerControls();
+  touchRecentTask(task);
   const generationVersion = round.version;
-  setTimeout(() => {
-    if (round.version !== generationVersion) return;
+  round.generationTimer = setTimeout(() => {
+    if (round.version !== generationVersion || round.state !== 'generating') return;
+    round.generationTimer = null;
     round.state = isExecutionRequest(round.prompt) && round === task.rounds.at(-1) ? 'waiting' : 'completed';
     round.time = taskTime();
     task.generating = false;
+    touchRecentTask(task);
     if (activeTask === task && currentView === 'task') {
       const nearBottom = contentScroll.scrollHeight - contentScroll.scrollTop - contentScroll.clientHeight < 140;
       renderTaskConversation(nearBottom && task.rounds.length > 1);
       updateComposerControls();
       taskDraftStatus.textContent = round.state === 'waiting' ? '方案已生成，等待你的确认。' : '本轮分析已完成，可以继续追问。';
     }
-  }, 900);
+  }, 2400);
+}
+function stopTaskGeneration() {
+  const task = activeTask;
+  if (currentView !== 'task' || !task?.generating) return;
+  const round = task.rounds.find(item => item.state === 'generating');
+  if (!round) return;
+  clearTimeout(round.generationTimer);
+  round.generationTimer = null;
+  round.state = 'stopped';
+  round.time = taskTime();
+  task.generating = false;
+  touchRecentTask(task);
+  task.changes.push({ title: '停止生成', text: `已停止第 ${task.rounds.indexOf(round) + 1} 轮回复。`, time: round.time });
+  renderTaskConversation();
+  updateComposerControls();
+  taskDraftStatus.textContent = '已停止生成，可以重新生成或继续追问。';
+  taskPrompt.focus({ preventScroll: true });
 }
 function taskAnswerBody(round, fullReport = false) {
   if (round.followup && !fullReport) return '<p class="task-followup-note">已收到补充要求，我会沿用当前任务上下文继续处理，并在现有结果基础上补充分析。</p>';
@@ -1492,7 +1675,7 @@ function taskAnswerBody(round, fullReport = false) {
   return `${round.followup ? '<p class="task-followup-note">已收到补充要求，我会沿用当前任务上下文继续处理，并在现有结果基础上补充分析。</p>' : ''}
     <h2>${escapeHtml(result.title)}</h2><p class="task-answer-description">${escapeHtml(result.description)}</p>
     <div class="task-key-conclusion"><span>${iconMarkup('welcome-stars-filled')}当前结论</span><p>${escapeHtml(result.conclusion)}</p></div>
-    ${taskTable(result)}<h3>下一步建议</h3><ul>${taskNextSteps.map(text => `<li>${escapeHtml(text)}</li>`).join('')}</ul>`;
+    ${taskTable(result)}<h3>下一步建议</h3><ul>${(result.nextSteps || taskNextSteps).map(text => `<li>${escapeHtml(text)}</li>`).join('')}</ul>`;
 }
 function taskApproval(round) {
   if (round.state === 'waiting') return `<section class="task-approval"><div><b>需要你的确认</b><p>方案涉及业务变更，请确认后继续。</p></div><div class="task-approval-actions"><button type="button" data-task-action="adjust">调整方案</button><button type="button" class="primary" data-task-action="approve">批准并继续</button></div></section>`;
@@ -1508,12 +1691,13 @@ function renderTaskConversation(scrollToEnd = false) {
   const person = activeTask.expert;
   taskConversation.innerHTML = activeTask.rounds.map(round => {
     const generating = round.state === 'generating';
-    const status = generating ? '正在分析' : round.state === 'waiting' ? '待确认' : '本轮完成';
+    const stopped = round.state === 'stopped';
+    const status = generating ? '正在分析' : stopped ? '已停止生成' : round.state === 'waiting' ? '待确认' : '本轮完成';
     return `<section class="task-round" data-round-id="${round.id}" aria-label="第 ${activeTask.rounds.indexOf(round) + 1} 轮对话">
       <div class="task-user-message"><p>${escapeHtml(round.prompt)}</p>${round.refs.length ? `<div class="task-message-refs">${round.refs.map(ref => `<span>${iconMarkup(ref.icon)}${escapeHtml(ref.label)}</span>`).join('')}</div>` : ''}</div>
       <article class="task-ai-message" aria-busy="${generating}">
         <header class="task-answer-heading"><span class="task-expert-avatar" style="--avatar-bg:${avatarColors[person.color][0]}">${iconMarkup(`${person.icon}-filled`)}</span><b>${escapeHtml(person.name)}</b><span class="task-round-status${generating ? ' is-generating' : ''}${round.state === 'waiting' ? ' is-waiting' : ''}">${generating ? '<i></i>' : ''}${status}</span></header>
-        <div class="task-answer-content">${generating ? '<div class="task-thinking" role="status"><span></span><span></span><span></span><p>正在梳理任务信息与分析结果…</p></div>' : `${taskAnswerBody(round)}${taskApproval(round)}
+        <div class="task-answer-content">${generating ? '<div class="task-thinking" role="status"><span></span><span></span><span></span><p>正在梳理任务信息与分析结果…</p></div>' : stopped ? `<p class="task-followup-note">你可以重新生成，或补充需求后继续发送。</p><div class="task-result-links"><button type="button" data-task-action="regenerate" ${activeTask.generating ? 'disabled' : ''}>${iconMarkup('task-regenerate')}重新生成</button></div>` : `${taskAnswerBody(round)}${taskApproval(round)}
           <div class="task-result-links"><button type="button" data-task-action="reply">${iconMarkup('task-reply')}回复</button><button type="button" data-task-action="artifacts">${iconMarkup('composer-file')}查看所有产物 <span>${activeTask.deliverables.length}</span></button><button type="button" data-task-action="changes">${iconMarkup('composer-settings')}查看所有变更 <span>${activeTask.changes.length}</span></button></div>
           <footer class="task-answer-footer"><div class="task-answer-actions">${taskAction('copy','task-copy','复制回复')}${taskAction('like','task-like','点赞', `aria-pressed="${round.feedback === 'like'}"`)}${taskAction('dislike','task-dislike','点踩', `aria-pressed="${round.feedback === 'dislike'}"`)}${taskAction('speak',speakingRound === round.id ? 'task-stop' : 'task-volume',speakingRound === round.id ? '停止朗读' : '朗读回复', `aria-pressed="${speakingRound === round.id}"`)}${taskAction('regenerate','task-regenerate','重新生成', activeTask.generating ? 'disabled' : '')}</div><span class="task-answer-meta">${escapeHtml(round.model)}<span>·</span>Token 1,280<span>·</span>${round.time}${round.version > 1 ? `<span>·</span>第 ${round.version} 版` : ''}</span></footer>`}</div>
       </article></section>`;
@@ -1522,7 +1706,7 @@ function renderTaskConversation(scrollToEnd = false) {
 }
 function taskAnswerText(round) {
   if (round.followup) return '已收到补充要求，我会沿用当前任务上下文继续处理，并在现有结果基础上补充分析。';
-  return [round.result.title, round.result.description, '当前结论', round.result.conclusion, round.result.columns.join(' | '), ...round.result.rows.map(row => row.join(' | ')), '下一步建议', ...taskNextSteps].join('\n\n');
+  return [round.result.title, round.result.description, '当前结论', round.result.conclusion, round.result.columns.join(' | '), ...round.result.rows.map(row => row.join(' | ')), '下一步建议', ...(round.result.nextSteps || taskNextSteps)].join('\n\n');
 }
 function stopTaskSpeech() {
   const wasSpeaking = speakingRound !== null;
@@ -1546,7 +1730,7 @@ function speakTaskRound(round) {
   window.speechSynthesis.speak(utterance);
   renderTaskConversation();
 }
-function latestTaskResult() { return [...activeTask.rounds].reverse().find(round => round.state !== 'generating') || activeTask.rounds[0]; }
+function latestTaskResult() { return [...activeTask.rounds].reverse().find(round => !['generating', 'stopped'].includes(round.state)); }
 let taskDrawerOpenFrame = 0;
 let taskDrawerCloseTimer = null;
 function openTaskDrawer() {
@@ -1606,6 +1790,7 @@ function showTaskDrawer(type) {
 }
 function showTaskArtifact(index) {
   const round = latestTaskResult();
+  if (!round) { notifyComposer('当前还没有生成结果'); return; }
   taskDrawerTitle.textContent = activeTask.deliverables[index];
   taskDrawerBack.hidden = false;
   taskDrawerBody.innerHTML = `<p class="task-drawer-note">${escapeHtml(activeTask.region)}${activeTask.project ? ' · ' + escapeHtml(activeTask.project) : ''}</p><div class="task-artifact-preview">${index ? taskTable(round.result) : taskAnswerBody(round, true)}</div>`;
@@ -1639,6 +1824,7 @@ taskConversation.addEventListener('click', async event => {
   } else if (action === 'approve' && round.state === 'waiting') {
     round.state = 'approved';
     activeTask.changes.push({ title: '方案确认', text: '已确认当前方案。', time: taskTime() });
+    touchRecentTask(activeTask);
     renderTaskConversation(); notifyComposer('方案已确认');
   }
 });
@@ -1733,7 +1919,6 @@ function selectWorkTab(tab) {
   });
   document.querySelector('#todoWorkPanel').hidden = tab !== 'todo';
   document.querySelector('#scheduleWorkPanel').hidden = tab !== 'schedule';
-  document.querySelector('#workIntro').textContent = tab === 'todo' ? '集中查看、处理运营工作流中的审批与确认事项。' : '按计划自动执行任务，并保留每次运行结果。';
   if (tab === 'todo') renderTodos(); else { renderSchedules(); renderRuns(); }
 }
 function bindWorkTabs(selector, dataKey, change) {
@@ -1906,6 +2091,265 @@ document.querySelector('#newScheduleButton').addEventListener('click', openSched
 ['scheduleSearch', 'scheduleStatusFilter', 'scheduleProjectFilter'].forEach(id => document.getElementById(id).addEventListener(id === 'scheduleSearch' ? 'input' : 'change', renderSchedules));
 ['runSearch', 'runStatusFilter', 'runTimeFilter'].forEach(id => document.getElementById(id).addEventListener(id === 'runSearch' ? 'input' : 'change', renderRuns));
 renderTodos(); renderSchedules(); renderRuns();
+
+/* 顶部最近工作、通知、反馈：依据 v5 功能，数据仅保存在当前页面内存。 */
+const topbarDrawer = document.querySelector('#topbarDrawer');
+const topbarDrawerBody = document.querySelector('#topbarDrawerBody');
+const topbarDrawerTitle = document.querySelector('#topbarDrawerTitle');
+const topbarDrawerBack = document.querySelector('#topbarDrawerBack');
+const topbarActions = {
+  recent: document.querySelector('#recentTasksButton'),
+  notifications: document.querySelector('#notificationsButton'),
+  feedback: document.querySelector('#feedbackButton')
+};
+const recentState = { tab: 'tasks', tasksQuery: '', artifactsQuery: '', artifact: null };
+const recentTaskRecords = new Map();
+const feedbackEntries = [];
+let topbarPanel = '';
+let topbarOpenFrame = 0;
+let topbarCloseTimer = null;
+let topbarAfterClose = null;
+let topbarReturnFocus = null;
+
+const recentTaskSeeds = [
+  { id: 'recent-ops', title: '济南公司近7天经营异常分析', expertId: 'ops_expert', state: 'generating', minutes: 3, prompt: '分析济南公司近7天所有场站经营情况，识别异常站点，并给出处理策略。', project: '济南公司智慧运营', files: ['济南公司经营异常分析.xlsx', '经营异常分析报告.md'] },
+  { id: 'recent-recall', title: '济钢PLUS会员召回策略', expertId: 'user_expert', state: 'waiting', minutes: 10, prompt: '分析济钢充电站PLUS会员流失情况并生成召回策略。', project: '济南公司智慧运营', files: ['PLUS会员召回名单.xlsx', '召回策略说明.md'] },
+  { id: 'recent-morning', title: '每日经营晨报', expertId: 'ops_expert', state: 'completed', minutes: 90, prompt: '生成每日经营晨报，汇总充电量、收入和异常站点。', project: '济南公司智慧运营', files: ['每日经营晨报.md'] },
+  { id: 'recent-price', title: '济钢周末热门调价方案', expertId: 'price_expert', state: 'completed', minutes: 1440, prompt: '分析济钢充电站周末热门时段的调价空间并生成方案。', project: '济南公司智慧运营', files: ['周末调价方案.xlsx', '收益测算.md'] },
+  { id: 'recent-device', title: '设备故障Top20根因诊断', expertId: 'device_expert', state: 'completed', minutes: 2880, prompt: '分析设备故障Top20并定位主要根因。', project: '设备健康专项', files: ['故障Top20分析.xlsx'] }
+];
+recentTaskSeeds.forEach(seed => {
+  const task = {
+    id: seed.id, title: seed.title, draftId: `draft:${seed.id}`, expert: { ...groups.expert.find(item => item.id === seed.expertId) },
+    prompt: seed.prompt, region: selectedArea.name, project: seed.project, generating: seed.state === 'generating',
+    deliverables: seed.files, updatedAt: Date.now() - seed.minutes * 60000,
+    changes: initialTaskChanges.map(item => ({ ...item, time: '08:30' }))
+  };
+  task.rounds = [{ id: `${task.id}-round-1`, prompt: task.prompt, refs: [], model: 'Auto', project: task.project, time: '08:30', state: seed.state, feedback: null, version: 1, followup: false, result: resultForTask(task) }];
+  recentTaskRecords.set(task.id, task);
+});
+const notificationItems = [
+  { id: 'notice-approval', title: '1个任务等待审批', detail: '济钢PLUS会员召回策略', time: '10分钟前', icon: 'clock', kind: 'waiting', taskId: 'recent-recall', read: false },
+  { id: 'notice-morning', title: '每日经营晨报已生成', detail: '充电量、收入与异常站点已汇总', time: '今天 08:36', icon: 'selected-check', kind: 'completed', taskId: 'recent-morning', read: false, artifact: 0 }
+];
+function registerRecentTask(task) {
+  task.updatedAt = Date.now();
+  recentTaskRecords.set(task.id, task);
+}
+function touchRecentTask(task) {
+  if (!recentTaskRecords.has(task.id)) return;
+  task.updatedAt = Date.now();
+  if (topbarDrawer.open && topbarPanel === 'recent' && !recentState.artifact) renderRecentList();
+}
+function recentStatus(task) {
+  const state = task.rounds.at(-1)?.state;
+  if (task.generating) return { kind: 'running', label: '进行中' };
+  if (state === 'waiting') return { kind: 'waiting', label: '待审批' };
+  if (state === 'stopped') return { kind: 'stopped', label: '已停止' };
+  return { kind: 'completed', label: '已完成' };
+}
+function recentTime(task) {
+  const minutes = Math.max(0, Math.floor((Date.now() - task.updatedAt) / 60000));
+  return minutes < 1 ? '刚刚' : minutes < 60 ? `${minutes}分钟前` : minutes < 1440 ? `${Math.floor(minutes / 60)}小时前` : `${Math.floor(minutes / 1440)}天前`;
+}
+function recentTasksSorted() { return [...recentTaskRecords.values()].sort((a, b) => b.updatedAt - a.updatedAt); }
+function recentResult(task) { return [...task.rounds].reverse().find(round => !['generating', 'stopped'].includes(round.state))?.result; }
+function recentArtifacts() {
+  return recentTasksSorted().flatMap(task => recentResult(task) ? task.deliverables.map((name, index) => ({ task, name, index })) : []);
+}
+function openTopbarPanel(panel) {
+  stopVoiceDemo(false); closeComposerPopover(); closeRegionPopover(); closeAccountMenu();
+  clearTimeout(topbarCloseTimer); cancelAnimationFrame(topbarOpenFrame); topbarAfterClose = null;
+  topbarPanel = panel; recentState.artifact = null;
+  topbarReturnFocus = topbarActions[panel];
+  topbarDrawerBack.hidden = true;
+  Object.entries(topbarActions).forEach(([key, button]) => button.setAttribute('aria-expanded', String(key === panel)));
+  if (panel === 'recent') { recentState.tab = 'tasks'; renderRecentPanel(); }
+  else if (panel === 'notifications') renderNotifications();
+  else renderFeedback();
+  topbarDrawer.classList.remove('is-closing');
+  if (!topbarDrawer.open) {
+    topbarDrawer.classList.remove('is-visible'); topbarDrawer.showModal(); void topbarDrawer.offsetWidth;
+  }
+  topbarOpenFrame = requestAnimationFrame(() => { topbarDrawer.classList.add('is-visible'); topbarOpenFrame = 0; });
+}
+function finishTopbarClose() {
+  if (!topbarDrawer.classList.contains('is-closing')) return;
+  clearTimeout(topbarCloseTimer);
+  const afterClose = topbarAfterClose; topbarAfterClose = null;
+  topbarDrawer.close(); topbarDrawer.classList.remove('is-visible', 'is-closing');
+  topbarDrawerBody.replaceChildren(); // 联系方式随表单关闭清空，不写入存储或反馈记录。
+  Object.values(topbarActions).forEach(button => button.setAttribute('aria-expanded', 'false'));
+  topbarReturnFocus?.focus({ preventScroll: true });
+  topbarPanel = ''; afterClose?.();
+}
+function closeTopbarPanel(afterClose = null) {
+  if (!topbarDrawer.open) { afterClose?.(); return; }
+  if (topbarDrawer.classList.contains('is-closing')) return;
+  topbarAfterClose = afterClose;
+  cancelAnimationFrame(topbarOpenFrame);
+  topbarDrawer.classList.add('is-closing'); topbarDrawer.classList.remove('is-visible');
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finishTopbarClose();
+  else topbarCloseTimer = setTimeout(finishTopbarClose, 280);
+}
+Object.entries(topbarActions).forEach(([panel, button]) => button.addEventListener('click', () => openTopbarPanel(panel)));
+document.querySelector('#topbarDrawerClose').addEventListener('click', () => closeTopbarPanel());
+topbarDrawer.addEventListener('cancel', event => { event.preventDefault(); closeTopbarPanel(); });
+topbarDrawer.addEventListener('transitionend', event => { if (event.target === topbarDrawer && event.propertyName === 'transform') finishTopbarClose(); });
+topbarDrawer.addEventListener('click', event => {
+  if (event.target !== topbarDrawer) return;
+  const rect = topbarDrawer.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeTopbarPanel();
+});
+function renderRecentPanel() {
+  topbarDrawerTitle.textContent = '最近工作'; topbarDrawerBack.hidden = true; recentState.artifact = null;
+  const artifacts = recentState.tab === 'artifacts';
+  const query = artifacts ? recentState.artifactsQuery : recentState.tasksQuery;
+  topbarDrawerBody.innerHTML = `<div class="utility-tabs" role="tablist" aria-label="最近工作类型"><button type="button" role="tab" id="recentTasksTab" aria-controls="recentResults" aria-selected="${!artifacts}" tabindex="${artifacts ? -1 : 0}" data-recent-tab="tasks">最近任务</button><button type="button" role="tab" id="recentArtifactsTab" aria-controls="recentResults" aria-selected="${artifacts}" tabindex="${artifacts ? 0 : -1}" data-recent-tab="artifacts">最近产物</button></div>
+    <div class="utility-search">${iconMarkup('search')}<input type="search" id="recentSearchInput" aria-label="搜索${artifacts ? '最近产物' : '最近任务'}" placeholder="${artifacts ? '搜索文件名称或来源任务' : '搜索任务名称、专家或项目'}" value="${escapeHtml(query)}" autocomplete="off"><button type="button" data-utility-action="clear-search" aria-label="清空搜索" ${query ? '' : 'hidden'}>${iconMarkup('composer-remove')}</button></div>
+    <section id="recentResults" role="tabpanel" aria-labelledby="${artifacts ? 'recentArtifactsTab' : 'recentTasksTab'}"></section>`;
+  renderRecentList();
+}
+function renderRecentList() {
+  const box = document.querySelector('#recentResults'); if (!box) return;
+  const artifacts = recentState.tab === 'artifacts';
+  const query = (artifacts ? recentState.artifactsQuery : recentState.tasksQuery).trim().toLocaleLowerCase();
+  const list = artifacts ? recentArtifacts().filter(item => `${item.name} ${item.task.title || item.task.prompt}`.toLocaleLowerCase().includes(query)) : recentTasksSorted().filter(task => `${task.title || task.prompt} ${task.prompt} ${task.project || ''} ${task.expert.name}`.toLocaleLowerCase().includes(query));
+  if (!list.length) {
+    box.innerHTML = `<div class="utility-empty">${iconMarkup(query ? 'search' : artifacts ? 'composer-file' : 'history')}<h3>${query ? '没有找到相关内容' : artifacts ? '还没有可查看的产物' : '还没有任务记录'}</h3><p>${query ? '换个关键词试试，或清空搜索。' : artifacts ? '任务生成的文件会显示在这里。' : '开始一个任务后，可以在这里继续查看。'}</p>${query ? '<button type="button" data-utility-action="clear-search">清空搜索</button>' : ''}</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="recent-work-list">${list.map(item => {
+    if (artifacts) {
+      const sheet = /\.(xlsx?|csv)$/i.test(item.name);
+      return `<button type="button" class="recent-work-row recent-file-row" data-recent-artifact="${item.index}" data-recent-task="${item.task.id}" aria-label="预览 ${escapeHtml(item.name)}"><span class="recent-file-icon${sheet ? ' is-sheet' : ''}">${iconMarkup(sheet ? 'benefit-chart' : 'composer-file')}</span><span class="recent-work-copy"><b>${escapeHtml(item.name)}</b><span>来自：${escapeHtml(item.task.title || item.task.prompt)}</span><small>${recentTime(item.task)} · ${sheet ? '数据表格' : '分析报告'}</small></span><span class="recent-row-chevron">${iconMarkup('chevron-left')}</span></button>`;
+    }
+    const state = recentStatus(item);
+    return `<button type="button" class="recent-work-row" data-open-recent="${item.id}" aria-label="打开任务 ${escapeHtml(item.title || item.prompt)}"><span class="recent-expert-icon" style="--avatar-bg:${avatarColors[item.expert.color][0]}">${iconMarkup(`${item.expert.icon}-filled`)}</span><span class="recent-work-copy"><b>${escapeHtml(item.title || item.prompt)}</b><span>${escapeHtml(item.expert.name)}${item.project ? ' · ' + escapeHtml(item.project) : ''}</span><small>${recentTime(item)}</small></span><span class="recent-status is-${state.kind}"><i></i>${state.label}</span></button>`;
+  }).join('')}</div>`;
+}
+function openRecentTask(id) {
+  const task = recentTaskRecords.get(id); if (!task) return;
+  closeTopbarPanel(() => {
+    stopTaskSpeech(); activeTask = task; selection.expert = task.expert.id; launchedFromCapabilities = false;
+    if (!taskDrafts.has(task.draftId)) taskDrafts.set(task.draftId, { prompt: '', index: -1, refs: [], model: 'Auto', project: task.project });
+    selectGroup('expert'); setContentView('task'); renderTaskConversation(); syncTaskDraft();
+    const pending = task.rounds.find(round => round.state === 'generating');
+    if (pending && !pending.generationTimer) generateTaskRound(task, pending);
+    document.querySelector('#taskBack').focus({ preventScroll: true });
+  });
+}
+function showRecentArtifact(taskId, index, origin = 'recent') {
+  const task = recentTaskRecords.get(taskId); const name = task?.deliverables[index]; const result = task && recentResult(task);
+  if (!name || !result) return;
+  recentState.artifact = { taskId, index, origin };
+  topbarDrawerTitle.textContent = '产物预览'; topbarDrawerBack.hidden = false;
+  topbarDrawerBack.setAttribute('aria-label', origin === 'notifications' ? '返回通知' : '返回最近产物');
+  const sheet = /\.(xlsx?|csv)$/i.test(name);
+  const round = { result, followup: false };
+  topbarDrawerBody.innerHTML = `<div class="utility-artifact-heading"><span class="recent-file-icon${sheet ? ' is-sheet' : ''}">${iconMarkup(sheet ? 'benefit-chart' : 'composer-file')}</span><div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(task.expert.name)} · ${recentTime(task)}</p></div></div><button type="button" class="utility-source-task" data-open-recent="${task.id}">来源任务：${escapeHtml(task.title || task.prompt)}${iconMarkup('task-arrow')}</button><div class="utility-artifact-actions"><button type="button" class="utility-primary" data-utility-action="download">${iconMarkup('utility-download')}${sheet ? '导出 CSV' : '下载 Markdown'}</button><button type="button" class="utility-secondary" data-utility-action="cite">引用到新任务</button></div><div class="utility-artifact-preview task-artifact-preview">${sheet ? taskTable(result) : taskAnswerBody(round, true)}</div>`;
+  topbarDrawerBody.scrollTop = 0;
+}
+function downloadRecentArtifact() {
+  const artifact = recentState.artifact; if (!artifact) return;
+  const task = recentTaskRecords.get(artifact.taskId); const result = recentResult(task); if (!result) return;
+  const name = task.deliverables[artifact.index]; const sheet = /\.(xlsx?|csv)$/i.test(name);
+  const csvCell = value => `"${String(value).replace(/"/g, '""')}"`;
+  const content = sheet ? '\uFEFF' + [result.columns, ...result.rows].map(row => row.map(csvCell).join(',')).join('\r\n') : `# ${result.title}\n\n${result.description}\n\n## 当前结论\n\n${result.conclusion}\n\n| ${result.columns.join(' | ')} |\n| ${result.columns.map(() => '---').join(' | ')} |\n${result.rows.map(row => '| ' + row.join(' | ') + ' |').join('\n')}\n\n## 下一步建议\n\n${(result.nextSteps || taskNextSteps).map(item => '- ' + item).join('\n')}\n`;
+  const blob = new Blob([content], { type: sheet ? 'text/csv;charset=utf-8' : 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob); const link = document.createElement('a');
+  link.href = url; link.download = name.replace(/\.[^.]+$/, '') + (sheet ? '.csv' : '.md'); link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function citeRecentArtifact() {
+  const artifact = recentState.artifact; if (!artifact) return;
+  const task = recentTaskRecords.get(artifact.taskId); const name = task.deliverables[artifact.index];
+  closeTopbarPanel(() => {
+    stopTaskSpeech(); selection.expert = task.expert.id; launchedFromCapabilities = false;
+    selectGroup('expert'); setContentView('expert'); updateNav();
+    addComposerReference({ label: name, meta: task.title || task.prompt, icon: 'composer-file', kind: 'conversation' });
+    taskPrompt.focus({ preventScroll: true });
+  });
+}
+function updateNotificationBadge() {
+  const count = notificationItems.filter(item => !item.read).length;
+  document.querySelector('#notificationDot').hidden = count === 0;
+  topbarActions.notifications.setAttribute('aria-label', count ? `通知，${count}条未读` : '通知');
+}
+function renderNotifications() {
+  topbarDrawerTitle.textContent = '通知'; topbarDrawerBack.hidden = true; recentState.artifact = null;
+  const unread = notificationItems.filter(item => !item.read).length;
+  topbarDrawerBody.innerHTML = `<div class="notification-toolbar"><span>${unread ? `${unread} 条未读消息` : '所有消息已读'}</span><button type="button" data-utility-action="read-all" ${unread ? '' : 'disabled'}>${iconMarkup('selected-check')}全部已读</button></div><div class="notification-list">${notificationItems.map(item => {
+    const waiting = item.kind === 'waiting' && recentStatus(recentTaskRecords.get(item.taskId)).kind === 'waiting';
+    const title = item.kind === 'waiting' && !waiting ? '审批任务已处理' : item.title;
+    return `<button type="button" class="notification-row${item.read ? '' : ' is-unread'}" data-notification="${item.id}" aria-label="${escapeHtml(title)}，${escapeHtml(item.detail)}${item.read ? '' : '，未读'}"><span class="notification-category is-${waiting ? 'waiting' : 'completed'}">${iconMarkup(waiting ? 'clock' : 'selected-check')}</span><span class="notification-copy"><b>${escapeHtml(title)}${item.read ? '' : '<i aria-label="未读"></i>'}</b><p>${escapeHtml(item.detail)}</p><small>${item.time}${item.artifact !== undefined ? ' · 1个交付物' : ''}</small><span class="notification-open">${waiting ? '查看审批任务' : item.artifact !== undefined ? '查看报告' : '查看任务'}${iconMarkup('chevron-left')}</span></span></button>`;
+  }).join('')}</div>`;
+}
+function renderFeedback() {
+  topbarDrawerTitle.textContent = '意见反馈'; topbarDrawerBack.hidden = true;
+  const types = ['产品建议', '功能问题', '交互体验', '其他'];
+  topbarDrawerBody.innerHTML = `<p class="feedback-intro">哪里不够好用，或希望增加什么功能？告诉我们你的想法。</p><form id="utilityFeedbackForm" class="utility-feedback-form" novalidate><fieldset><legend>反馈类型</legend><div class="feedback-type-options">${types.map((type, index) => `<label><input type="radio" name="feedbackType" value="${type}" ${index === 0 ? 'checked' : ''}><span>${type}</span></label>`).join('')}</div></fieldset><div class="feedback-field"><label for="utilityFeedbackContent">反馈内容<span class="feedback-required">*</span></label><textarea id="utilityFeedbackContent" name="content" maxlength="2000" required aria-describedby="feedbackContentError" placeholder="请描述遇到的问题，或你希望改善的地方…"></textarea><div class="feedback-field-meta"><span id="feedbackContentError" role="alert"></span><span id="feedbackCharCount">0 / 2000</span></div></div><div class="feedback-field"><label for="utilityFeedbackContact">联系方式<span class="work-optional">选填</span></label><input type="text" id="utilityFeedbackContact" name="contact" autocomplete="off" maxlength="100" placeholder="手机号或邮箱，方便进一步沟通"></div><div class="feedback-actions"><button type="submit" class="utility-primary">提交反馈${iconMarkup('task-arrow')}</button></div></form>`;
+}
+topbarDrawerBody.addEventListener('input', event => {
+  if (event.target.id === 'recentSearchInput') {
+    recentState[recentState.tab === 'tasks' ? 'tasksQuery' : 'artifactsQuery'] = event.target.value;
+    topbarDrawerBody.querySelector('.utility-search button').hidden = !event.target.value;
+    renderRecentList();
+  }
+  if (event.target.id === 'utilityFeedbackContent') {
+    document.querySelector('#feedbackCharCount').textContent = `${event.target.value.length} / 2000`;
+    if (event.target.value.trim()) {
+      event.target.removeAttribute('aria-invalid'); document.querySelector('#feedbackContentError').textContent = '';
+    }
+  }
+});
+topbarDrawerBody.addEventListener('submit', event => {
+  if (event.target.id !== 'utilityFeedbackForm') return;
+  event.preventDefault(); const form = event.target; const content = form.elements.content.value.trim();
+  if (!content) {
+    document.querySelector('#feedbackContentError').textContent = '请填写反馈内容';
+    form.elements.content.setAttribute('aria-invalid', 'true'); form.elements.content.focus(); return;
+  }
+  // 仅暂存类型和内容；不读取联系方式，也不调用网络或浏览器持久化存储。
+  feedbackEntries.push({ type: form.elements.feedbackType.value, content }); form.reset();
+  topbarDrawerBody.innerHTML = `<div class="feedback-success" role="status"><span>${iconMarkup('selected-check')}</span><h3>谢谢你的反馈</h3><p>反馈已暂存，感谢你帮助我们改进体验。</p><button type="button" class="utility-primary" data-utility-action="feedback-done">完成</button></div>`;
+  topbarDrawerBody.querySelector('button').focus();
+});
+topbarDrawerBack.addEventListener('click', () => {
+  if (recentState.artifact?.origin === 'notifications') renderNotifications();
+  else { recentState.tab = 'artifacts'; renderRecentPanel(); }
+});
+topbarDrawerBody.addEventListener('keydown', event => {
+  const tab = event.target.closest('[data-recent-tab]'); if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  event.preventDefault(); recentState.tab = event.key === 'Home' ? 'tasks' : event.key === 'End' ? 'artifacts' : recentState.tab === 'tasks' ? 'artifacts' : 'tasks';
+  renderRecentPanel(); document.querySelector(`[data-recent-tab="${recentState.tab}"]`).focus();
+});
+topbarDrawerBody.addEventListener('click', event => {
+  const button = event.target.closest('button'); if (!button || topbarDrawer.classList.contains('is-closing')) return;
+  if (button.dataset.recentTab) { recentState.tab = button.dataset.recentTab; renderRecentPanel(); document.querySelector(`[data-recent-tab="${recentState.tab}"]`).focus(); }
+  else if (button.dataset.openRecent) openRecentTask(button.dataset.openRecent);
+  else if (button.dataset.recentArtifact !== undefined) showRecentArtifact(button.dataset.recentTask, Number(button.dataset.recentArtifact));
+  else if (button.dataset.notification) {
+    const item = notificationItems.find(item => item.id === button.dataset.notification); item.read = true; updateNotificationBadge();
+    if (item.artifact !== undefined) showRecentArtifact(item.taskId, item.artifact, 'notifications');
+    else openRecentTask(item.taskId);
+  } else {
+    const action = button.dataset.utilityAction;
+    if (action === 'clear-search') {
+      recentState[recentState.tab === 'tasks' ? 'tasksQuery' : 'artifactsQuery'] = '';
+      const input = document.querySelector('#recentSearchInput'); input.value = '';
+      topbarDrawerBody.querySelector('.utility-search button').hidden = true; renderRecentList(); input.focus();
+    } else if (action === 'download') downloadRecentArtifact();
+    else if (action === 'cite') citeRecentArtifact();
+    else if (action === 'read-all') { notificationItems.forEach(item => { item.read = true; }); updateNotificationBadge(); renderNotifications(); }
+    else if (action === 'feedback-done') closeTopbarPanel();
+  }
+});
+document.addEventListener('keydown', event => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k' || document.querySelector('dialog[open]')) return;
+  event.preventDefault(); recentState.tab = 'tasks'; openTopbarPanel('recent'); document.querySelector('#recentSearchInput').focus();
+});
+updateNotificationBadge();
 
 renderCapabilities();
 renderPeople();
